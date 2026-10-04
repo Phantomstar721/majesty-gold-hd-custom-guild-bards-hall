@@ -87,6 +87,12 @@ Renown records supported victories and settles earnings at home. Street
 Spectacle uses timed outdoor performance and passing listeners. Prize Duel has
 a 65% win chance; victory earns gold and losing earns practice XP.
 
+Economy jobs are opportunistic near town. Eligible Street Spectacle selection
+has a 40% chance before ordinary hunts/exploration. Prize Duel selection has a
+25% chance after champion calls and before ordinary hunts, querying eligible
+venues within 180 units. Neither job sends a hero back from the wilds to seek
+work; urgent duties and purchasing retain priority.
+
 Hiring lasts about two game days and costs 200 gold, split 100 to the Hall and
 100 to the hired bard, with a 50-gold patron reserve. A recruitment-panel toggle
 controls new hiring. Saved contracts, cancellation and inside-building patron

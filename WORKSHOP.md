@@ -53,3 +53,9 @@ equipment and shared systems require the Manager's runtime; enabling the raw
 package in Majesty's ordinary mod selector does not provide those features.
 
 Supports Original Majesty and Northern Expansion content.
+
+## Voice credits
+
+- **Troubadour:** [Teatarouva (@serrizawa)](https://www.fiverr.com/serrizawa/be-a-voice-in-your-project)
+- **Spellsinger:** [Jake (@jakewn)](https://www.fiverr.com/jakewn)
+- **Blade Dancer:** [Char C (@chardoesva)](https://www.fiverr.com/chardoesva/be-your-female-character-voice-actor)

@@ -80,7 +80,11 @@ def check_heroes(sdk, package, extract_function, stock_equal, require):
         if title == 'Blade_Dancer':
             actual = actual.replace('function Ranger_tree', 'function ranger_tree')
             actual = actual.replace('$Bards_Dancer_Wander', '$hero_wander')
-            actual = actual.replace('if ($Bards_Prize_Duel_Check(thisagent,15) == FALSE)', '')
+            prize = 'if ($Bards_Prize_Duel_Check(thisagent,25) == FALSE)'
+            require(actual.count(prize) == 1 and
+                    actual.index('$Hall_Champs_Check') < actual.index(prize) < actual.index('$Combat_wandering'),
+                    'Approved local Prize Duel choice must follow champion calls and precede ordinary hunts')
+            actual = actual.replace(prize, '')
             hunt = 'if ($Combat_wandering(thisagent,75) == False)'
             heroes = 'if ($combat_wandering_heroes(thisagent,55) == False)'
             require(expected.count(hunt) == 1 and expected.count(heroes) == 1, 'Stock Ranger hunt anchors changed')

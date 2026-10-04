@@ -142,7 +142,7 @@ begin
     if (Town == $NullAgent()) return FALSE;
     Enemies = $list_enemies_seen(Singer, $GetAttribute(Singer, #ATTRIB_SightRange));
     if ($ListSize(Enemies) > 0) return FALSE;
-    if ($RandomNumber(100) >= 33) return FALSE;
+    if ($RandomNumber(100) >= 40) return FALSE;
     Result = $Bards_Show_Start(Singer, Singer, Town, 1, 20000);
     if (Result != 1) return FALSE;
     if ($HasAttribute("BardsStreetActive", Singer) == FALSE)

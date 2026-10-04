@@ -60,6 +60,12 @@ not supply those features.
 
 Supports Original Majesty and Northern Expansion content.
 
+## Voice credits
+
+- **Troubadour:** [Teatarouva (@serrizawa)](https://www.fiverr.com/serrizawa/be-a-voice-in-your-project)
+- **Spellsinger:** [Jake (@jakewn)](https://www.fiverr.com/jakewn)
+- **Blade Dancer:** [Char C (@chardoesva)](https://www.fiverr.com/chardoesva/be-your-female-character-voice-actor)
+
 ## Source repository
 
 The public repository contains gameplay and build source, text configuration,

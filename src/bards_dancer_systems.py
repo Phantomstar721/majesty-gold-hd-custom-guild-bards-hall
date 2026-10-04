@@ -15,7 +15,7 @@ def dancer_systems(sdk, extract):
     choose = re.sub(r'(?im)^Begin\s*$', lambda m: m[0] + '\n\tif ($Bards_Jobs_Unlocked(ThisAgent) == FALSE) return FALSE;\n\tBuilding = "Prize Duel";\n', choose, count=1)
     choose = replace_once(choose,
         '$ListObjects (ThisAgent, "Building", -1, Potentials, #CheckTitles, Building, #ATTRIB_FirstStageBuilt, 1);',
-        '$ListObjects (ThisAgent, "Building", -1, Candidates, #MyTeam, #ATTRIB_FirstStageBuilt, 1);\n'
+        '$ListObjects (ThisAgent, "Building", 180, Candidates, #MyTeam, #ATTRIB_FirstStageBuilt, 1);\n'
         '\tforeach Candidate in Candidates do\n\t\tif ($Bards_Prize_Venue(ThisAgent, Candidate)) Potentials << Candidate;')
     choose = choose.replace('"Visiting"', '"Bards_Prize_Duel"').replace('$Use_Building;', '$Bards_Prize_Use;')
     start = choose.index('\t\t\t//If the building is a Marketplace')

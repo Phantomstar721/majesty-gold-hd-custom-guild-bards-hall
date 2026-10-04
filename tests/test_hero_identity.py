@@ -73,15 +73,15 @@ class HeroIdentityTests(unittest.TestCase):
                 self.assertEqual(calls[-1], chosen)
                 self.assertFalse(set(calls) & {'bards_street_check','bards_prize_duel_check','bards_follow_check'})
 
-    def test_hunting_wins_over_spoils_and_leisure(self):
+    def test_hunting_wins_over_leisure_when_local_jobs_decline(self):
         for title, competing in (
-            ('Blade_Dancer', {'bards_combat_wandering', 'bards_prize_duel_check', 'go_home'}),
+            ('Blade_Dancer', {'bards_combat_wandering', 'go_home'}),
             ('Spellsinger', {'bards_combat_wandering', 'pursue_entertainment', 'go_home'}),
             ('Spellsinger', {'raid_lair', 'pursue_entertainment', 'go_home'}),
         ):
             _, calls, _ = self.tree(title, competing)
             self.assertIn(calls[-1], {'bards_combat_wandering', 'raid_lair'})
-            self.assertFalse(set(calls) & {'bards_prize_duel_check', 'go_home'})
+            self.assertNotIn('go_home', calls)
             if title != 'Blade_Dancer': self.assertNotIn('pursue_entertainment', calls)
 
     def test_reward_and_emergency_decisions_still_preempt_ordinary_hunting(self):
@@ -90,16 +90,21 @@ class HeroIdentityTests(unittest.TestCase):
                 _, calls, _ = self.tree(title, {urgent, 'bards_combat_wandering', 'bards_prize_duel_check'})
                 self.assertEqual(calls[-1], urgent)
 
-    def test_private_optional_activities_remain_available_after_work_declines(self):
+    def test_local_jobs_precede_optional_hunts_but_not_champion_calls(self):
         for title, activity in (('Blade_Dancer', 'bards_prize_duel_check'),
                                 ('Spellsinger', 'bards_street_check')):
             _, calls, _ = self.tree(title, activity)
             self.assertEqual(calls[-1], activity)
             if title == 'Blade_Dancer':
-                self.assertIn('bards_combat_wandering', calls)
+                self.assertIn('hall_champs_check', calls)
+                self.assertNotIn('bards_combat_wandering', calls)
             else:
                 self.assertIn('purchase_bazaar', calls)
                 self.assertNotIn('pursue_entertainment', calls)
+
+        _, calls, _ = self.tree('Blade_Dancer', {'hall_champs_check', 'bards_prize_duel_check'})
+        self.assertEqual(calls[-1], 'hall_champs_check')
+        self.assertNotIn('bards_prize_duel_check', calls)
 
     def test_private_troubadour_evaluator_never_casts_source_healer_spells(self):
         source = extract_function((ROOT / 'src/gpl/Bards_Hero_Evaluation.gpl').read_text(), 'Bards_Troubadour_Evaluate')

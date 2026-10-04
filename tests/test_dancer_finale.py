@@ -207,7 +207,67 @@ class FinaleTests(unittest.TestCase):
         self.assertEqual((dancer['ATTRIB_Parry'], dancer['ATTRIB_Dodge']), (0, 0))
 
 
+class PrizeChoiceHarness(ImpactHarness):
+    """Support stock Visit_Building's list removal and counter increment."""
+    def run(self, node, env):
+        if node[0] == 'simple':
+            tokens = node[1]
+            if len(tokens) == 3 and tokens[1:] == ['+', '+']:
+                env[tokens[0]] += 1
+                return
+            if len(tokens) >= 4 and tokens[1:3] == ['-', '=']:
+                self.value(tokens[:1], env).remove(self.value(tokens[3:], env))
+                return
+        super().run(node, env)
+
+
 class PrizeTests(unittest.TestCase):
+    def choice_runtime(self, venues, roll=0):
+        vm, dancer, _, events = self.runtime()
+        source = (ROOT / 'src/gpl/Bards_Prize_Duel.gpl').read_text()
+        source += extract_function(dancer_systems(SDK, extract_function), 'Bards_Prize_Duel_Check')
+        source = source.replace('#Max_Farthest_Building_Choices', '3')
+        choice = PrizeChoiceHarness(re.sub(r'#(\w+)', r'"\1"', source))
+        choice.calls.update(vm.calls)
+        queries = []
+        def objects(owner, kind, radius, result, *filters):
+            queries.append((kind, radius, filters))
+            result.extend(v for v in venues if v['distance'] <= radius
+                          and v['player'] == owner['player']
+                          and v['ATTRIB_FirstStageBuilt'] == 1)
+        choice.calls.update(listobjects=objects, listsize=len,
+                            listmember=lambda values, index: values[index - 1],
+                            randomnumber=lambda n: roll if n == 100 else 0,
+                            debugout=lambda *_: None, bards_prize_use=lambda *_: None)
+        return choice, dancer, queries
+
+    def test_nearby_venue_selection_and_twenty_five_percent_boundary(self):
+        local = agent(type='Building', title='Embassy', player=1,
+                      ATTRIB_FirstStageBuilt=1, distance=180)
+        remote = agent(type='Building', title='Embassy', player=1,
+                       ATTRIB_FirstStageBuilt=1, distance=181)
+        for roll, expected in ((0, True), (24, True), (25, False), (99, False)):
+            vm, dancer, queries = self.choice_runtime([local, remote], roll)
+            self.assertEqual(vm.call('Bards_Prize_Duel_Check', dancer, 25), expected)
+            if expected:
+                self.assertIs(dancer['Target'], local)
+                self.assertEqual(dancer['Taskname'], 'Bards_Prize_Duel')
+                self.assertIs(dancer['ActiveScript'], vm.calls['bards_prize_use'])
+                self.assertEqual(queries, [('Building', 180, ('MyTeam', 'ATTRIB_FirstStageBuilt', 1))])
+            else:
+                self.assertEqual(queries, [])
+
+    def test_remote_or_ineligible_venues_do_not_replace_ordinary_task(self):
+        for fields in ({'distance': 181}, {'title': 'Marketplace'},
+                       {'player': 2}, {'ATTRIB_FirstStageBuilt': 0}):
+            venue = agent(**{'type': 'Building', 'title': 'Embassy', 'player': 1,
+                             'ATTRIB_FirstStageBuilt': 1, 'distance': 50, **fields})
+            vm, dancer, _ = self.choice_runtime([venue])
+            previous = dancer['Target']
+            self.assertFalse(vm.call('Bards_Prize_Duel_Check', dancer, 25))
+            self.assertIs(dancer['Target'], previous)
+            self.assertEqual(dancer['ActiveScript'], 'visit')
+
     def test_shared_arrival_and_retreat_remain_stock_outside_private_extensions(self):
         generated = dancer_systems(SDK, extract_function)
         for name, path, addition in (

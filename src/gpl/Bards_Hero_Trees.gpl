@@ -134,12 +134,13 @@ begin
 
 	if ($Hall_Champs_Check(thisagent, 40) == False)
 
+	// Occasionally choose a nearby town venue before leaving on an ordinary hunt.
+	if ($Bards_Prize_Duel_Check(thisagent,25) == FALSE)
+
 	// Prefer nearby viable duels over stock Ranger exploration.
 	if ($Bards_combat_wandering(thisagent,95) == False)
 
 	if ($Bards_combat_wandering_heroes(thisagent,55) == False)
-
-	if ($Bards_Prize_Duel_Check(thisagent,15) == FALSE)
 
 	if ($explore_map(thisagent,95) == false)
 

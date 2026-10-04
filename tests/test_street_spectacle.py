@@ -66,6 +66,24 @@ class SpectacleTests(unittest.TestCase):
         vm.call('Bards_Street_Phrase', singer, singer)
         return state
 
+    def test_local_performance_has_forty_percent_selection_boundary(self):
+        for roll, expected in ((0, True), (39, True), (40, False), (99, False)):
+            vm, singer, *_ = self.runtime()
+            vm.calls['randomnumber'] = lambda _, value=roll: value
+            self.assertEqual(vm.call('Bards_Street_Check', singer), expected)
+
+    def test_no_town_anchor_declines_without_changing_the_singers_task(self):
+        vm, singer, *_ = self.runtime()
+        queries = []
+        def no_local_buildings(caster, kind, radius, result, *filters):
+            queries.append((kind, radius))
+        vm.calls['listobjects'] = no_local_buildings
+        singer['Target'] = singer
+        self.assertFalse(vm.call('Bards_Street_Check', singer))
+        self.assertEqual(queries, [('Building', 180)])
+        self.assertEqual(singer['ActiveScript'], 'ordinary')
+        self.assertIs(singer['Target'], singer)
+
     @staticmethod
     def tick(vm, clock, count):
         for _ in range(count):
