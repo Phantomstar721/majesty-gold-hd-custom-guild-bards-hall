@@ -1,0 +1,729 @@
+{
+  "schema_version": 3,
+  "mod_id": "{e277a34f-bfb6-54ec-bfec-565d735edc37}",
+  "internal_name": "CustomGuildBards",
+  "display_name": "Custom Guild: Bards Hall",
+  "custom_buildings": [
+    {
+      "local_name": "Bards_Hall",
+      "controller_base": "AP52",
+      "panel_resource_template": "AP52"
+    }
+  ],
+  "runtime_features": [
+    {
+      "type": "stock.native-timing.v1",
+      "spell_ids": [
+        "BVA1",
+        "BMA1",
+        "BSA1",
+        "BRA1"
+      ],
+      "effector_ids": [
+        "BYV1",
+        "BME2",
+        "BME1",
+        "BSE1",
+        "BRE1",
+        "BNE1",
+        "BCE1"
+      ]
+    },
+    {
+      "type": "manager.overlay-movement-scale.v1",
+      "overlay_id": "BME2",
+      "percent": 115
+    },
+    {
+      "type": "manager.kingdom-research.v1",
+      "feature_key": "epic-chronicles",
+      "parent_building": "Bards_Hall",
+      "action_control_id": 29472,
+      "descriptor_template_control_id": 5020,
+      "required_level": 3,
+      "price": 3000,
+      "gold_bonus_percent": 15,
+      "experience_bonus_percent": 15,
+      "progress_control_id": 29473,
+      "active_display_control_id": 29474,
+      "completion_text": "Epic Chronicles",
+      "active_effector": "Bards_Chronicles_Active"
+    },
+    {
+      "type": "stock.mx22-building-open-toggle.v3",
+      "toggle_key": "hiring",
+      "parent_building": "Bards_Hall",
+      "panel_key": "bards_recruitment",
+      "open_command_id": 29504,
+      "close_command_id": 29505,
+      "state_attribute": "BardsHiringClosed",
+      "state_callback_symbol": "Bards_Hiring_Closed"
+    },
+    {
+      "type": "stock.typed-boolean-provider.v1",
+      "feature_key": "capability_provider",
+      "attribute": "HeroCapability",
+      "parameter_types": [
+        "agent",
+        "string"
+      ],
+      "callback_symbol": "Bards_Hero_Capability"
+    },
+    {
+      "type": "stock.typed-boolean-provider.v1",
+      "feature_key": "support_eligible_provider",
+      "attribute": "HeroSupportEligible",
+      "parameter_types": [
+        "agent",
+        "agent"
+      ],
+      "callback_symbol": "Bards_Hall_Support_Eligible"
+    },
+    {
+      "type": "stock.typed-boolean-provider.v1",
+      "feature_key": "support_tick_provider",
+      "attribute": "HeroSupportTick",
+      "parameter_types": [
+        "agent",
+        "agent"
+      ],
+      "callback_symbol": "Bards_Hall_Support_Tick"
+    },
+    {
+      "type": "stock.gameplay-event-observer.v1",
+      "feature_key": "support-combat-xp",
+      "event": "combat-experience-awarded",
+      "callback_symbol": "Bards_CombatXP"
+    },
+    {
+      "type": "stock.gameplay-event-observer.v1",
+      "feature_key": "support-exploration-xp",
+      "event": "exploration-experience-awarded",
+      "callback_symbol": "Bards_ExplorationXP"
+    },
+    {
+      "type": "stock.ap52-recruitment-panel.v1",
+      "panel_key": "bards_recruitment",
+      "parent_building": "Bards_Hall",
+      "third_price_control_id": 29441,
+      "source_dialog_id": "BDRC",
+      "open_command_id": 29442
+    },
+    {
+      "type": "stock.hero-quest-participant.v1",
+      "feature_key": "troubadour-quests",
+      "hero_script": "Bards_Troubadour_Tree",
+      "stock_hero_script": "mx_healer"
+    },
+    {
+      "type": "stock.hero-quest-participant.v1",
+      "feature_key": "spellsinger-quests",
+      "hero_script": "Bards_Spellsinger_Tree",
+      "stock_hero_script": "mx_cultist"
+    },
+    {
+      "type": "stock.hero-quest-participant.v1",
+      "feature_key": "blade-dancer-quests",
+      "hero_script": "Bards_Blade_Dancer_Tree",
+      "stock_hero_script": "mx_ranger"
+    },
+    {
+      "type": "stock.spell-evaluation-equivalent.v1",
+      "feature_key": "arcane-note-evaluation",
+      "private_spell": "Bards_Arcane_Note",
+      "stock_spell": "energy_blast",
+      "hero_title": "Spellsinger"
+    },
+    {
+      "type": "stock.spell-evaluation-equivalent.v1",
+      "feature_key": "resonant-burst-evaluation",
+      "private_spell": "Bards_Resonant_Burst",
+      "stock_spell": "sun_scorch",
+      "hero_title": "Spellsinger"
+    },
+    {
+      "type": "stock.spell-origin.v1",
+      "feature_key": "bards-refrain-origin"
+    },
+    {
+      "type": "stock.source-context-dispatch.v1",
+      "feature_key": "refrain_player_spell",
+      "target_symbol": "player_spell_attack",
+      "parameter_types": [
+        "agent",
+        "integer",
+        "integer"
+      ],
+      "callback_symbol": "Bards_PlayerSpellAttackAttributed"
+    },
+    {
+      "type": "stock.source-context-dispatch.v1",
+      "feature_key": "refrain_periodic_player",
+      "target_symbol": "Bards_Periodic_Player_Spell_Attack",
+      "parameter_types": [
+        "agent",
+        "integer",
+        "integer"
+      ],
+      "callback_symbol": "Bards_PeriodicPlayerAttributed"
+    },
+    {
+      "suppression_exempt_actions": [
+        "acid_bolt",
+        "Advanced_Attack",
+        "alchemist_fire_balm",
+        "alchemist_regeneration_elixer",
+        "alchemist_shapeshift_potion",
+        "alchemist_strength_potion",
+        "Bards_Arcane_Note",
+        "Bards_Finale_Cast",
+        "Bards_Flourish_Strike",
+        "Double_attack",
+        "drain_life",
+        "electrical_fury",
+        "energy_blast",
+        "Fire_Balm",
+        "healer_heal",
+        "Horrify",
+        "ice_lance",
+        "Infectious_Cloud",
+        "insect_swarm",
+        "Invisibility_Brew",
+        "Item_Damage_Shield",
+        "Item_Healing",
+        "life_leach",
+        "monster_multi_attack",
+        "multiple enemy attack",
+        "power_shock",
+        "Regeneration_Elixer",
+        "Shapeshift_Potion",
+        "Speed_Tonic",
+        "Strength_Potion",
+        "teleport_short_amulet"
+      ],
+      "suppression_special_actions": [
+        "animate_skeleton",
+        "aura_of_peace",
+        "Bards_Countermelody",
+        "Bards_March",
+        "Bards_Refrain",
+        "Bards_Resonant_Burst",
+        "Bards_Satire",
+        "Bards_Valor",
+        "call_to_grave",
+        "camouflage",
+        "change_shape",
+        "charm_monster",
+        "control_undead",
+        "Damage_Shield",
+        "endless_winter",
+        "eternal_soul",
+        "exploding_aura",
+        "fire_ball",
+        "fire_blast",
+        "Fire_Hammer_Spell",
+        "fire_shield",
+        "flame_shield",
+        "flash_flask",
+        "force",
+        "frost_armor",
+        "get_healer",
+        "Gorgon_Petrify",
+        "hands_of_steel",
+        "Howl_of_Discord",
+        "icy_touch",
+        "inferno",
+        "iron_will",
+        "level_leach",
+        "magic_mirror",
+        "meditation",
+        "Medusa_Slow",
+        "Medusa_Stare",
+        "meteor_storm",
+        "miasma_mist",
+        "Mind_warp",
+        "monk_stone_skin",
+        "paralytic_gaze",
+        "Pestilence",
+        "radiate_energy",
+        "Recall",
+        "resist_magic",
+        "SBeast_Speed",
+        "shield_of_light",
+        "Speed_Monster",
+        "Stonebacks_Shield",
+        "stun_serum",
+        "Summon_Medusae",
+        "Summon_Sbeast",
+        "summon_skeleton",
+        "Summon_Spider",
+        "sun_scorch",
+        "teleport",
+        "Teleport_long",
+        "teleport_short",
+        "Terrify",
+        "Turn_Undead_Healer",
+        "Turn_Undead_Paladin",
+        "vortex",
+        "W_K_teleport",
+        "Wendigo_Blink"
+      ],
+      "already_guarded_direct_callbacks": [
+        "Energy_Blast_Hit",
+        "Power_Shock_Hit",
+        "Acid_Bolt_Hit",
+        "Electrical_Fury_Hit",
+        "Spire_Blast_Hit",
+        "Ixmil_Blast_Hit",
+        "Insect_Swarm_Hit",
+        "horrify_hit",
+        "Pestilence_missile_Hit",
+        "Infectious_Cloud_Hit",
+        "Drain_Life_Hit",
+        "Life_Leach_Hit",
+        "tower_blast_callback",
+        "Fire_Strike_Damage",
+        "Lightning_Bolt_Damage",
+        "Fire_Blast_Hit",
+        "Fire_Hammer_Hit",
+        "Bards_Arcane_Note_Hit",
+        "Bards_Echo_Attack"
+      ],
+      "physical_projectile_callbacks": [
+        "make_attack",
+        "fire_make_attack"
+      ],
+      "area_or_periodic_projectile_callbacks": [
+        "Exploding_Aura_Hit",
+        "Fire_Ball_Hit",
+        "Meteor_Missile_Hit",
+        "ChainLightning_MissileHit",
+        "Frost_Missile_Hit",
+        "Ratapult_hit",
+        "Endless_Winter_Inner_Missile_Hit",
+        "Endless_Winter_Middle_Missile_Hit",
+        "Endless_Winter_Outer_Missile_Hit",
+        "Alchemist_Miasma_Mist_Missile_Hit"
+      ],
+      "other_exempt_projectile_callbacks": [
+        "level_leach_hit",
+        "gate_hit",
+        "Fire_Hammer_Dud"
+      ],
+      "direct_projectile_callbacks": [
+        "Ice_Lance_Hit"
+      ],
+      "type": "stock.spell-policy-discovery.v1",
+      "feature_key": "bards-spell-classification"
+    },
+    {
+      "type": "stock.spell-policy-provider.v1",
+      "feature_key": "bards-deflect",
+      "policy": "block-direct-projectile",
+      "callback_symbol": "Bards_Deflect_Spell"
+    },
+    {
+      "type": "stock.spell-policy-provider.v1",
+      "feature_key": "bards-countermelody",
+      "policy": "suppress-special-spell",
+      "callback_symbol": "Bards_Suppress_Special"
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-valor",
+      "kind": "spell",
+      "subject_id": "BVA1",
+      "unlock_level": 0,
+      "display_text": "Ballad of Valor",
+      "tooltip_text": "Inspires nearby allies to strike more accurately, dodge and parry more skillfully, and resist magic.",
+      "image_id": "BS01",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-march",
+      "kind": "spell",
+      "subject_id": "BMA1",
+      "unlock_level": 0,
+      "display_text": "Marching Song",
+      "tooltip_text": "Quickens the steps and actions of nearby allies and the Troubadour himself.",
+      "image_id": "BS02",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-satire",
+      "kind": "spell",
+      "subject_id": "BSA1",
+      "unlock_level": 0,
+      "display_text": "Cutting Satire",
+      "tooltip_text": "A mocking song weakens an enemy and slows their movement and actions.",
+      "image_id": "BS03",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-refrain",
+      "kind": "spell",
+      "subject_id": "BRA1",
+      "unlock_level": 0,
+      "display_text": "Heroic Refrain",
+      "tooltip_text": "Rallies nearby allies, increasing all damage they deal and reducing the damage they take from enemy hits.",
+      "image_id": "BS04",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-note",
+      "kind": "spell",
+      "subject_id": "BNA1",
+      "unlock_level": 0,
+      "display_text": "Arcane Note",
+      "tooltip_text": "Hurls a note of magical force at an enemy. Its power grows with the Spellsinger's intellect and Instrument upgrades.",
+      "image_id": "BS05",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-reverberation",
+      "kind": "passive",
+      "subject_id": "BDS1",
+      "unlock_level": 3,
+      "display_text": "Reverberation",
+      "tooltip_text": "Arcane Note echoes to another nearby enemy. Notes and echoes build Resonance, making further Arcane Notes more damaging.",
+      "image_id": "BS06",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-burst",
+      "kind": "spell",
+      "subject_id": "BNA2",
+      "unlock_level": 0,
+      "display_text": "Resonant Burst",
+      "tooltip_text": "A burst of magical sound damages nearby enemies, consuming their Resonance to stun them with a Crescendo.",
+      "image_id": "BS07",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-countermelody",
+      "kind": "spell",
+      "subject_id": "BCA1",
+      "unlock_level": 0,
+      "display_text": "Countermelody",
+      "tooltip_text": "Disrupts an enemy's spellcasting and makes their weapon attacks less accurate.",
+      "image_id": "BS08",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-training",
+      "kind": "passive",
+      "subject_id": "BDD1",
+      "unlock_level": 1,
+      "display_text": "Duelist Training",
+      "tooltip_text": "Expert footwork and bladework help the Blade Dancer dodge missiles and parry melee attacks.",
+      "image_id": "BS09",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-riposte",
+      "kind": "passive",
+      "subject_id": "BDD1",
+      "unlock_level": 3,
+      "display_text": "Riposte",
+      "tooltip_text": "Answers a parried melee attack with a swift counterattack.",
+      "image_id": "BS10",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-deflect",
+      "kind": "passive",
+      "subject_id": "BDD1",
+      "unlock_level": 5,
+      "display_text": "Deflect",
+      "tooltip_text": "Turns aside incoming missiles and direct magical attacks.",
+      "image_id": "BS11",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-flourish",
+      "kind": "spell",
+      "subject_id": "BFA1",
+      "unlock_level": 0,
+      "display_text": "Dueling Flourish",
+      "tooltip_text": "A succession of three hits against one opponent ends with a powerful strike that pierces armor.",
+      "image_id": "BS12",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-finale",
+      "kind": "passive",
+      "subject_id": "BDD1",
+      "unlock_level": 8,
+      "display_text": "Rousing Finale",
+      "tooltip_text": "A Flourish against any monster prepares an inspiring finish. Slaying that opponent rouses nearby allies and grants Encore.",
+      "image_id": "BS13",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "skill-encore",
+      "kind": "passive",
+      "subject_id": "BDD1",
+      "unlock_level": 8,
+      "display_text": "Encore",
+      "tooltip_text": "Carries the triumph of a Finale into the next duel. Her next attack against a monster or enemy hero prepares another inspiring finish.",
+      "image_id": "BS14",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "effect-valor",
+      "kind": "enchantment",
+      "subject_id": "BYV1",
+      "unlock_level": 0,
+      "display_text": "Ballad of Valor",
+      "tooltip_text": "Inspired to strike more accurately, dodge and parry more skillfully, and resist magic.",
+      "image_id": "BX01",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "effect-march",
+      "kind": "enchantment",
+      "subject_id": "BME2",
+      "unlock_level": 0,
+      "display_text": "Marching Song",
+      "tooltip_text": "Moves and acts more quickly.",
+      "image_id": "BX02",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "effect-satire",
+      "kind": "enchantment",
+      "subject_id": "BSE1",
+      "unlock_level": 0,
+      "display_text": "Cutting Satire",
+      "tooltip_text": "Weakened by a mocking song, moving and acting more slowly.",
+      "image_id": "BX03",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "effect-refrain",
+      "kind": "enchantment",
+      "subject_id": "BRE1",
+      "unlock_level": 0,
+      "display_text": "Heroic Refrain",
+      "tooltip_text": "All damage dealt is increased, and enemy hits inflict less damage.",
+      "image_id": "BX04",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "effect-reverberation",
+      "kind": "enchantment",
+      "subject_id": "BNE1",
+      "unlock_level": 0,
+      "display_text": "Resonance",
+      "tooltip_text": "Lingering notes make Arcane Note more damaging. Resonant Burst consumes them to stun this enemy.",
+      "image_id": "BX05",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "effect-countermelody",
+      "kind": "enchantment",
+      "subject_id": "BCE1",
+      "unlock_level": 0,
+      "display_text": "Countermelody",
+      "tooltip_text": "Spellcasting is disrupted and weapon attacks are less accurate.",
+      "image_id": "BX06",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "effect-march-legacy",
+      "kind": "enchantment",
+      "subject_id": "BME1",
+      "unlock_level": 0,
+      "display_text": "Marching Song",
+      "tooltip_text": "A marching song quickens the hero's steps and actions.",
+      "image_id": "BX07",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "effect-roused",
+      "kind": "enchantment",
+      "subject_id": "BRS1",
+      "unlock_level": 0,
+      "display_text": "Roused",
+      "tooltip_text": "Inspired to fight more bravely, strike harder, and dodge and parry more skillfully.",
+      "image_id": "BX08",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.ap78-info-row.v1",
+      "feature_key": "effect-encore",
+      "kind": "enchantment",
+      "subject_id": "BEC1",
+      "unlock_level": 0,
+      "display_text": "Encore",
+      "tooltip_text": "Her next attack against a monster or enemy hero prepares another Rousing Finale. Slaying that opponent inspires nearby allies.",
+      "image_id": "BX09",
+      "image_set": 1019
+    },
+    {
+      "type": "stock.equipment.v1",
+      "feature_key": "troubadour-instrument",
+      "slot": "weapon",
+      "name_table": "BEN1",
+      "image_id": "BEI1",
+      "image_set": 1004,
+      "hero_ids": [
+        "BDT1"
+      ]
+    },
+    {
+      "type": "stock.equipment.v1",
+      "feature_key": "spellsinger-instrument",
+      "slot": "weapon",
+      "name_table": "BEN2",
+      "image_id": "BEI2",
+      "image_set": 1004,
+      "hero_ids": [
+        "BDS1"
+      ]
+    },
+    {
+      "type": "stock.equipment.v1",
+      "feature_key": "blade-dancer-dual-wield",
+      "slot": "weapon",
+      "name_table": "BEN3",
+      "image_id": "BEI3",
+      "image_set": 1004,
+      "hero_ids": [
+        "BDD1"
+      ]
+    },
+    {
+      "type": "stock.name-generator.v1",
+      "generator_id": "NMBT",
+      "name_tables": [
+        "HNT0",
+        "HNT1",
+        "HNT2",
+        "HNT3"
+      ]
+    },
+    {
+      "type": "stock.name-generator.v1",
+      "generator_id": "NMBS",
+      "name_tables": [
+        "HNS0",
+        "HNS1",
+        "HNS2",
+        "HNS3"
+      ]
+    },
+    {
+      "type": "stock.name-generator.v1",
+      "generator_id": "NMBD",
+      "name_tables": [
+        "HND0",
+        "HND1",
+        "HND2",
+        "HND3"
+      ]
+    },
+    {
+      "type": "stock.bazaar-potion-policy.v1",
+      "feature_key": "bards-bazaar-troubadour",
+      "hero_title": "Troubadour",
+      "potions": {
+        "speed": true,
+        "fire-balm": false,
+        "strength": false,
+        "regeneration": true,
+        "invisibility": true,
+        "shapeshift": true
+      },
+      "shapeshift": {
+        "preset": "medusa"
+      },
+      "private_actions": {}
+    },
+    {
+      "type": "stock.bazaar-potion-policy.v1",
+      "feature_key": "bards-bazaar-spellsinger",
+      "hero_title": "Spellsinger",
+      "potions": {
+        "speed": true,
+        "fire-balm": false,
+        "strength": false,
+        "regeneration": true,
+        "invisibility": true,
+        "shapeshift": true
+      },
+      "shapeshift": {
+        "preset": "medusa"
+      },
+      "private_actions": {}
+    },
+    {
+      "type": "stock.bazaar-potion-policy.v1",
+      "feature_key": "bards-bazaar-blade-dancer",
+      "hero_title": "Blade_Dancer",
+      "potions": {
+        "speed": true,
+        "fire-balm": false,
+        "strength": true,
+        "regeneration": true,
+        "invisibility": true,
+        "shapeshift": true
+      },
+      "shapeshift": {
+        "preset": "minotaur"
+      },
+      "private_actions": {}
+    },
+    {
+      "type": "stock.gameplay-event-observer.v1",
+      "feature_key": "bards-renown-bounty",
+      "event": "attack-flag-completed",
+      "callback_symbol": "Bards_Renown_Completed_Bounty"
+    },
+    {
+      "type": "stock.activity-duration.v1",
+      "feature_key": "bards-hiring",
+      "api_prefix": "Bards_Contract",
+      "condition_callback_symbol": "Bards_Hire_Condition",
+      "completion_callback_symbol": "Bards_Hire_Completed",
+      "cancellation_callback_symbol": "Bards_Hire_Cancelled"
+    },
+    {
+      "type": "stock.activity-duration.v1",
+      "feature_key": "bards-street-show",
+      "api_prefix": "Bards_Show",
+      "condition_callback_symbol": "Bards_Street_Show_Condition",
+      "completion_callback_symbol": "Bards_Street_Show_Completed",
+      "cancellation_callback_symbol": "Bards_Street_Show_Cancelled"
+    },
+    {
+      "type": "stock.activity-duration.v1",
+      "feature_key": "bards-street-audience",
+      "api_prefix": "Bards_Audience",
+      "condition_callback_symbol": "Bards_Street_Audience_Condition",
+      "completion_callback_symbol": "Bards_Street_Audience_Completed",
+      "cancellation_callback_symbol": "Bards_Street_Audience_Cancelled"
+    }
+  ]
+}

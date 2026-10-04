@@ -1,0 +1,9 @@
+// Manager calls this read-only predicate only for explicitly registered
+// special spells, at stock validation and execution boundaries. Basic spells
+// and physical techniques are never inferred from the IsSpell flag.
+function Bards_Suppress_Special(agent Caster, string SpellName) is boolean
+declare
+begin
+    if ($IsValidGamePiece(Caster) == FALSE) return FALSE;
+    return $CheckEffector(Caster, "Bards_Countermelody_Icon");
+end

@@ -1,0 +1,118 @@
+// Private stock-derived danger evaluation; no healing, turning or animal charm.
+
+function Bards_Troubadour_Evaluate (agent ThisAgent) is Boolean
+declare
+begin
+If ($listsize(thisagent's "Hostiles") == 0)
+		 return FALSE;
+
+	$flee(thisagent,#intent_flee_scared);
+
+	$clearlist(thisagent's "Hostiles");
+
+	return True;
+end
+
+function Bards_Spellsinger_Evaluate(agent thisagent) is Boolean
+
+declare
+	agent new_target,target;
+	boolean flaggie;
+
+begin
+
+	$list_enemies(thisagent,1);
+
+	if ($listsize(thisagent's "Hostiles") == 0) return FALSE;
+
+	if ($should_I_Run(thisagent,thisagent's "Hostiles") == FALSE)
+		begin
+			flaggie = FALSE; 
+
+			target = thisagent's "target";
+			new_target = $pick_closest(thisagent,thisagent's "Hostiles");
+
+			if (($isvalidgamepiece(Target) == FALSE) || (Target == ThisAgent))
+				flaggie = TRUE;
+			else
+				begin
+					if ((target's "type" == "lair") || (target's "type" == "building"))
+						flaggie = TRUE;
+					if (($distanceBetweenAgents(thisagent,new_target) <
+					$distanceBetweenAgents(thisagent,Target)))
+						flaggie = TRUE;
+				end
+
+			if (flaggie)
+				begin
+					$stopmoving(thisagent);
+					thisagent's "Target" = new_target;
+
+					If (New_Target's "Type" == "Monster")
+						$Say (ThisAgent, "VFX_See_Hostile");
+
+					$SpecifyIntent (ThisAgent, #intent_fighting);
+					thisagent's "ActiveScript" = $attack_object;
+				end
+
+			return Flaggie;
+		end
+	else
+		begin
+
+			$clearlist(thisagent's "Hostiles");
+			return TRUE;
+		end
+end
+
+function Bards_Blade_Dancer_Evaluate(agent thisagent) is Boolean
+
+declare
+	agent new_target,target;
+	boolean flaggie;
+
+begin
+
+	$list_enemies(thisagent,1);
+
+	if ($listsize(thisagent's "Hostiles") == 0) return FALSE;
+
+	if ($should_I_Run(thisagent,thisagent's "Hostiles") == FALSE)
+		begin
+			flaggie = FALSE; 
+
+			target = thisagent's "target";
+			new_target = $pick_closest(thisagent,thisagent's "Hostiles");
+
+			if (($isvalidgamepiece(Target) == FALSE) || (Target == ThisAgent))
+				flaggie = TRUE;
+			else
+				begin
+					if ((target's "type" == "lair") || (target's "type" == "building"))
+						flaggie = TRUE;
+					if (($distanceBetweenAgents(thisagent,new_target) <
+					$distanceBetweenAgents(thisagent,Target)))
+						flaggie = TRUE;
+				end
+
+			if (flaggie)
+				begin
+					$stopmoving(thisagent);
+					thisagent's "Target" = new_target;
+
+					If (New_Target's "Type" == "Monster")
+						$Say (ThisAgent, "VFX_See_Hostile");
+
+					$SpecifyIntent (ThisAgent, #intent_fighting);
+					thisagent's "ActiveScript" = $attack_object;
+				end
+
+			return Flaggie;
+		end
+	else
+		begin
+
+			$clearlist(thisagent's "Hostiles");
+			return TRUE;
+		end
+end

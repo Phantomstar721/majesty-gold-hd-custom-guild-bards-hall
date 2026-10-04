@@ -1,0 +1,132 @@
+// Selection-time stock ListObjects/BackTarget ownership. No reservation ledger.
+function Bards_Follow_Leader_Eligible(agent Bard, agent Leader) is boolean
+declare
+begin
+    if ($notvalid(Leader)) return FALSE;
+    if (Leader == Bard) return FALSE;
+    if (Leader's "subtype" != "Hero") return FALSE;
+    if (Leader's "title" == "Troubadour") return FALSE;
+    if ($GetPlayerTeamNumber(Leader) != $GetPlayerTeamNumber(Bard)) return FALSE;
+    return TRUE;
+end
+
+function Bards_Follow_Snapshot(agent Bard) is list
+declare
+    list Followers, Hidden, Invisible, Camouflaged;
+begin
+    $ListObjects(Bard, "Hero", -1, Followers, #MyTeam, #NoHiddenMap, #CheckTitles, "Troubadour");
+    $ListObjects(Bard, "Hidden", -1, Hidden, #MyTeam, #NoHiddenMap, #CheckTitles, "Troubadour");
+    $ListObjects(Bard, "Invisible", -1, Invisible, #MyTeam, #NoHiddenMap, #CheckTitles, "Troubadour");
+    $ListObjects(Bard, "Camouflaged", -1, Camouflaged, #MyTeam, #NoHiddenMap, #CheckTitles, "Troubadour");
+    Followers = $AddLists(Followers, Hidden);
+    Followers = $AddLists(Followers, Invisible);
+    Followers = $AddLists(Followers, Camouflaged);
+    return Followers;
+end
+
+function Bards_Follow_Assignment_Free(agent Bard, agent Leader, list Followers) is boolean
+declare
+    agent Follower;
+    boolean Free;
+begin
+    Free = TRUE;
+    foreach Follower in Followers do
+        if (Follower != Bard)
+            if ($IsDead(Follower) == FALSE)
+                begin
+                    // reset_tasks leaves BackTarget behind: only a live task
+                    // assignment owns it. Include hidden and distant followers.
+                    if (Follower's "BasicScript" != Follower's "StartingScript")
+                        if (Follower's "BackTarget" == Leader) Free = FALSE;
+                    if ($HasAttribute("BardsHirePatron", Follower))
+                        if (Follower's "BardsHirePatron" == Leader) Free = FALSE;
+                end
+    return Free;
+end
+
+function Bards_Follow_Target_Eligible(agent Bard, agent Leader) is boolean
+declare
+begin
+    if ($Bards_Follow_Leader_Eligible(Bard, Leader) == FALSE) return FALSE;
+    return $Bards_Follow_Assignment_Free(Bard, Leader, $Bards_Follow_Snapshot(Bard));
+end
+
+// Stock follow's home-visit comparison, guarded for non-hero prototypes.
+// GPL compound expressions must not be used to guard missing properties.
+function Bards_Follow_Going_Home(agent Leader) is boolean
+declare
+begin
+    if ($notvalid(Leader)) return FALSE;
+    if ($HasAttribute("home", Leader) == FALSE) return FALSE;
+    if ($HasAttribute("BackScript", Leader) == FALSE) return FALSE;
+    if ($HasAttribute("Target", Leader) == FALSE) return FALSE;
+    if (Leader's "BackScript" != $use_building) return FALSE;
+    return (Leader's "Target" == Leader's "home");
+end
+
+function Bards_Follow_Active(agent Leader) is boolean
+declare
+begin
+    if ($InsideBuilding(Leader)) return FALSE;
+    if ($hasLowHP(Leader)) return FALSE;
+    if ($Bards_Follow_Going_Home(Leader)) return FALSE;
+    if (Leader's "ActiveScript" == $travel_to_exp) return TRUE;
+    if ($Bards_Hero_Attacking(Leader)) return TRUE;
+    if ($ListSize(Leader's "Hostiles") > 0) return TRUE;
+    // Accepted Guild adventuring retains its own task identities and lifetime.
+    if ($HasAttribute("AGAcceptedQuest", Leader))
+        if (Leader's "AGAcceptedQuest" == Leader)
+            if ($IsMoving(Leader)) return TRUE;
+    return FALSE;
+end
+
+function Bards_Hall_Supporting(agent Hero) is boolean
+declare
+begin
+    if ($HasAttribute("AGAcceptedQuest", Hero) == FALSE) return FALSE;
+    if (Hero's "AGAcceptedQuest" != Hero) return FALSE;
+    if ($HasAttribute("AGQuestKind", Hero) == FALSE) return FALSE;
+    if (Hero's "AGQuestKind" != 10) return FALSE;
+    if ($HasAttribute("AGDestination", Hero) == FALSE) return FALSE;
+    if (Hero's "AGDestination" != Hero's "BackTarget") return FALSE;
+    if (Hero's "BasicScript" == Hero's "StartingScript") return FALSE;
+    return (Hero's "ActiveScript" == Hero's "BasicScript");
+end
+
+function Bards_Hall_Support_Eligible(agent Hero, agent Leader) is boolean
+declare
+begin
+    return $Bards_Follow_Target_Eligible(Hero, Leader);
+end
+
+// Called by the Guild at its existing follow tick. Keep its assignment, claim,
+// BackTarget and duration intact; only replace generic offensive participation.
+function Bards_Hall_Support_Tick(agent Hero, agent Leader) is boolean
+declare
+    agent Anchor;
+begin
+    if ($Bards_Hall_Supporting(Hero) == FALSE) return FALSE;
+    Anchor = Leader;
+    if ($IsHidden(Leader)) Anchor = $GetBuildingContainer(Leader);
+    if ($IsValidGamePiece(Anchor) == FALSE) return TRUE;
+    if ($Bards_Combat_Support(Hero, Leader)) return TRUE;
+    if ($Bards_Troubadour_Evaluate(Hero)) return TRUE;
+    if ($Bards_Try_Song(Hero)) return TRUE;
+    if ($DistanceBetweenAgents(Hero, Anchor) > (180 - #follow_support_buffer))
+        begin
+            Hero's "Destination" = $LocationOf(Anchor);
+            $Move(Hero, Hero's "Destination");
+        end
+    else
+        if ($IsMoving(Hero) == FALSE)
+            begin
+                if ($RandomNumber(100) > 85) $PerformAction(Hero, Hero's "Idle_action", Leader);
+                Hero's "Counter" += 1;
+                if (Hero's "Counter" >= #followBored)
+                    begin
+                        $Move(Hero, $RandomCoord(Hero, 150));
+                        Hero's "Counter" = 0;
+                    end
+            end
+    return TRUE;
+end

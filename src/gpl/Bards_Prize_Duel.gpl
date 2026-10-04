@@ -1,0 +1,26 @@
+function Bards_Prize_Venue(agent Hero, agent Building) is boolean
+declare
+    string Title, Member;
+begin
+    if ($notvalid(Building)) return FALSE;
+    if ($Bards_Jobs_Unlocked(Hero) == FALSE) return FALSE;
+    if (Building's "type" != "Building") return FALSE;
+    if ($GetAttribute(Building, #ATTRIB_FirstStageBuilt) == 0) return FALSE;
+    if ($GetPlayerTeamNumber(Hero) != $GetPlayerTeamNumber(Building)) return FALSE;
+    Title = Building's "title";
+    if ((Title == "Fairgrounds") || (Title == "Embassy") || (Title == "Adventurer_Guild")) return TRUE;
+    if ($HasAttribute("member_title", Building) == FALSE) return FALSE;
+    Member = Building's "member_title";
+    return ((Member == "Warrior") || (Member == "Ranger") || (Member == "Rogue") ||
+        (Member == "Wizard") || (Member == "Paladin") || (Member == "Barbarian") ||
+        (Member == "Warrior_of_Discord") || (Member == "Monk") || (Member == "Cultist") ||
+        (Member == "Priestess") || (Member == "Adept") || (Member == "Solarus") ||
+        (Member == "Dwarf") || (Member == "Elf"));
+end
+
+function Bards_Prize_Cancel(agent Hero, agent Building)
+declare
+begin
+    if ($InsideBuilding(Hero)) $Exit_Building(Hero, Building);
+    else $Reset_Tasks(Hero);
+end

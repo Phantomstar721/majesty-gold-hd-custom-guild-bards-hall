@@ -1,0 +1,413 @@
+{
+  "schema_version": 1,
+  "revision": "bards-base-fit-v2-stock-approach",
+  "approval": "User requested the Adventurers Guild collision fix method for all Bards Hall levels (2026-09-19).",
+  "coordinate_system": "IMAG image-plane coordinates relative to TILE hotspot; native isometric conversion unchanged",
+  "reference": {
+    "package": "bards-guild-west-shadows-r1-v1",
+    "hotspot": [
+      223,
+      243
+    ],
+    "canvas": [
+      480,
+      480
+    ]
+  },
+  "set_id": 208,
+  "fit_notes": "Follow the exposed level-1 foundation and each completed level masonry, stage and front steps with modest clearance for native 16-unit collision rasterization. Roofs, spire and cast shadows are not ground obstacles. Retain stock entrance and attachment metadata. Preserve the literal Marketplace rear approach envelope and its occupied origin. Stock Move(agent) targets the building origin and IsAdjacent tests the footprint; an origin isolated north of the footprint strands builders.",
+  "levels": {
+    "1": {
+      "rectangle": [
+        -100,
+        -7,
+        121,
+        179
+      ],
+      "polygon_points": [
+        [
+          61,
+          -7
+        ],
+        [
+          -64,
+          -3
+        ],
+        [
+          -96,
+          7
+        ],
+        [
+          -100,
+          69
+        ],
+        [
+          -99,
+          127
+        ],
+        [
+          -39,
+          153
+        ],
+        [
+          -5,
+          143
+        ],
+        [
+          21,
+          179
+        ],
+        [
+          51,
+          179
+        ],
+        [
+          119,
+          164
+        ],
+        [
+          119,
+          135
+        ],
+        [
+          121,
+          119
+        ],
+        [
+          121,
+          87
+        ],
+        [
+          111,
+          30
+        ]
+      ],
+      "reference_tiles": {
+        "inactive": "d42e67e45022180b80fa12c80912911d9632ec23c26bf593114a256841b85620",
+        "build-1": "73260778edd9037d536ef42c96ba04aabd9f43b0c8aa16fb468f8113c091a849"
+      },
+      "coverage_probes": {
+        "blocked": {
+          "stage_steps": [
+            -63,
+            131
+          ],
+          "reported_stage_front_corner": [
+            -31,
+            135
+          ],
+          "front_steps": [
+            67,
+            163
+          ],
+          "west_masonry": [
+            -57,
+            92
+          ],
+          "rear_foundation": [
+            13,
+            79
+          ],
+          "east_masonry": [
+            107,
+            105
+          ],
+          "native_move_destination": [
+            0,
+            0
+          ],
+          "stock_rear_approach": [
+            0,
+            32
+          ]
+        },
+        "clear": {
+          "front_approach": [
+            62,
+            195
+          ],
+          "stage_approach": [
+            -65,
+            170
+          ],
+          "west_bypass": [
+            -128,
+            114
+          ],
+          "east_bypass": [
+            164,
+            104
+          ],
+          "rear_bypass": [
+            0,
+            -32
+          ]
+        }
+      }
+    },
+    "2": {
+      "rectangle": [
+        -107,
+        -7,
+        133,
+        179
+      ],
+      "polygon_points": [
+        [
+          61,
+          -7
+        ],
+        [
+          -64,
+          -3
+        ],
+        [
+          -96,
+          7
+        ],
+        [
+          -100,
+          69
+        ],
+        [
+          -107,
+          95
+        ],
+        [
+          -107,
+          127
+        ],
+        [
+          -39,
+          153
+        ],
+        [
+          -5,
+          143
+        ],
+        [
+          21,
+          179
+        ],
+        [
+          55,
+          179
+        ],
+        [
+          123,
+          164
+        ],
+        [
+          123,
+          135
+        ],
+        [
+          133,
+          119
+        ],
+        [
+          133,
+          83
+        ],
+        [
+          111,
+          30
+        ]
+      ],
+      "reference_tiles": {
+        "inactive": "b6cdfe11f1a0eaac8233d9f189ba37ecbdb7f472966788a5450e80a13e50b315",
+        "build-1": "ec5e65836c6d9ed01d3551a999bd6f250f28d164642ba46624aeb3e9353d1879"
+      },
+      "coverage_probes": {
+        "blocked": {
+          "stage_steps": [
+            -63,
+            131
+          ],
+          "reported_stage_front_corner": [
+            -31,
+            135
+          ],
+          "front_steps": [
+            67,
+            163
+          ],
+          "west_masonry": [
+            -57,
+            92
+          ],
+          "rear_foundation": [
+            13,
+            79
+          ],
+          "east_masonry": [
+            119,
+            105
+          ],
+          "native_move_destination": [
+            0,
+            0
+          ],
+          "stock_rear_approach": [
+            0,
+            32
+          ]
+        },
+        "clear": {
+          "front_approach": [
+            62,
+            195
+          ],
+          "stage_approach": [
+            -65,
+            170
+          ],
+          "west_bypass": [
+            -128,
+            114
+          ],
+          "east_bypass": [
+            164,
+            104
+          ],
+          "rear_bypass": [
+            0,
+            -32
+          ]
+        }
+      }
+    },
+    "3": {
+      "rectangle": [
+        -107,
+        -7,
+        143,
+        179
+      ],
+      "polygon_points": [
+        [
+          61,
+          -7
+        ],
+        [
+          -64,
+          -3
+        ],
+        [
+          -96,
+          7
+        ],
+        [
+          -100,
+          69
+        ],
+        [
+          -107,
+          95
+        ],
+        [
+          -107,
+          127
+        ],
+        [
+          -39,
+          153
+        ],
+        [
+          -5,
+          143
+        ],
+        [
+          21,
+          179
+        ],
+        [
+          55,
+          179
+        ],
+        [
+          123,
+          164
+        ],
+        [
+          123,
+          135
+        ],
+        [
+          143,
+          119
+        ],
+        [
+          143,
+          83
+        ],
+        [
+          111,
+          30
+        ]
+      ],
+      "reference_tiles": {
+        "inactive": "09e3c5a84430f52f564ec4e9e1cbe6c1c37f8064d589acffbb2c1f72c5a6da42",
+        "build-1": "9d838b5d3b5672a97b11259f05558cad32362f9acfb9358a8c292e3ab7a82369"
+      },
+      "coverage_probes": {
+        "blocked": {
+          "stage_steps": [
+            -63,
+            131
+          ],
+          "reported_stage_front_corner": [
+            -31,
+            135
+          ],
+          "front_steps": [
+            67,
+            163
+          ],
+          "west_masonry": [
+            -57,
+            92
+          ],
+          "rear_foundation": [
+            13,
+            79
+          ],
+          "east_masonry": [
+            129,
+            105
+          ],
+          "native_move_destination": [
+            0,
+            0
+          ],
+          "stock_rear_approach": [
+            0,
+            32
+          ]
+        },
+        "clear": {
+          "front_approach": [
+            62,
+            195
+          ],
+          "stage_approach": [
+            -65,
+            170
+          ],
+          "west_bypass": [
+            -128,
+            114
+          ],
+          "east_bypass": [
+            164,
+            104
+          ],
+          "rear_bypass": [
+            0,
+            -32
+          ]
+        }
+      }
+    }
+  }
+}

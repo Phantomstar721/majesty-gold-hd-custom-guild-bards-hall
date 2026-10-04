@@ -1,0 +1,16 @@
+// Stock guild-service eligibility: current home, completed building and Level.
+// Read at the existing decision/completion boundaries; no cached unlock state.
+function Bards_Jobs_Unlocked(agent Bard) is boolean
+declare
+    agent Guild;
+begin
+    if ($Bards_Is_Bard(Bard) == FALSE) return FALSE;
+    if ($HasAttribute("Home", Bard) == FALSE) return FALSE;
+    Guild = Bard's "Home";
+    if ($Bards_Hire_Guild(Bard, Guild) == FALSE) return FALSE;
+    if ($HasAttribute("Level", Guild) == FALSE) return FALSE;
+    // Native Description changes at upgrade start, but this GPL Level keeps
+    // the completed tier until stock UpgradeAgentAttributes. Level 2 jobs
+    // therefore remain available while the next native stage is constructing.
+    return (Guild's "Level" >= 2);
+end

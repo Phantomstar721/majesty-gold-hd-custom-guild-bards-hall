@@ -1,0 +1,156 @@
+// Stock Blessing/Wither/Rage-style duration-owned effect callbacks.
+// CreateEffector refreshes the existing effect. Valor applies only the change
+// in potency; expiry/deletion owns reversal of its stored applied values.
+// No timers, watchers, or parallel cleanup.
+// These apply routines do not dispatch casts or emulate missing timing APIs.
+
+// Approved staircase: floor((INT - 22) / 2), bounded to 0..4.
+function Bards_Song_Intelligence_Step(agent Caster) is integer
+declare
+    integer Intel;
+begin
+    Intel = $GetAttribute(Caster, #ATTRIB_Intelligence);
+    if (Intel <= 23) return 0;
+    if (Intel >= 30) return 4;
+    return (Intel - 22) / 2;
+end
+
+function Bards_Valor_Apply(agent Caster, agent Recipient)
+declare
+    boolean Existing;
+    integer Step, Skill, Resist, OldSkill, OldResist;
+begin
+    Existing = $CheckEffector(Recipient, "Bards_Valor_Icon");
+    Step = $Bards_Song_Intelligence_Step(Caster);
+    Skill = 8 + Step;
+    Resist = 10 + Step;
+    OldSkill = 0;
+    OldResist = 0;
+    if (Existing)
+        begin
+            OldSkill = 8;
+            OldResist = 10;
+            if ($HasAttribute("BardsValorSkill", Recipient))
+                begin
+                    OldSkill = Recipient's "BardsValorSkill";
+                    OldResist = Recipient's "BardsValorResist";
+                end
+        end
+    if ($HasAttribute("BardsValorSkill", Recipient) == FALSE)
+        begin
+            $AddAttribute(Recipient, "BardsValorSkill", "integer", 0);
+            $AddAttribute(Recipient, "BardsValorResist", "integer", 0);
+        end
+    // Weaker casts cannot refresh the stronger effect's lifetime.
+    if (Skill < OldSkill) return;
+    $CreateEffector(Recipient, "Bards_Valor_Icon", 8000);
+    $CreateEffector(Recipient, "Bards_Valor_Flash", 0);
+    // Apply only the difference; refresh never adds another full bonus.
+    $MagicalAdjustAttribute(Recipient, #ATTRIB_HtoH, Skill - OldSkill);
+    $MagicalAdjustAttribute(Recipient, #ATTRIB_Dodge, Skill - OldSkill);
+    $MagicalAdjustAttribute(Recipient, #ATTRIB_Parry, Skill - OldSkill);
+    $MagicalAdjustAttribute(Recipient, #ATTRIB_Ranged, Skill - OldSkill);
+    $MagicalAdjustAttribute(Recipient, #ATTRIB_MagicResistance, Resist - OldResist);
+    Recipient's "BardsValorSkill" = Skill;
+    Recipient's "BardsValorResist" = Resist;
+    if ($HasAttribute("BardsValorSource", Recipient) == FALSE)
+        $AddAttribute(Recipient, "BardsValorSource", "agentref", Caster);
+    else
+        Recipient's "BardsValorSource" = Caster;
+end
+
+function Bards_Valor_End(agent ThisAgent)
+declare
+    integer Skill, Resist;
+begin
+    Skill = 8;
+    Resist = 10;
+    if ($HasAttribute("BardsValorSkill", ThisAgent))
+        begin
+            Skill = ThisAgent's "BardsValorSkill";
+            Resist = ThisAgent's "BardsValorResist";
+            ThisAgent's "BardsValorSkill" = 0;
+            ThisAgent's "BardsValorResist" = 0;
+        end
+    $MagicalAdjustAttribute(ThisAgent, #ATTRIB_HtoH, -Skill);
+    $MagicalAdjustAttribute(ThisAgent, #ATTRIB_Dodge, -Skill);
+    $MagicalAdjustAttribute(ThisAgent, #ATTRIB_Parry, -Skill);
+    $MagicalAdjustAttribute(ThisAgent, #ATTRIB_Ranged, -Skill);
+    $MagicalAdjustAttribute(ThisAgent, #ATTRIB_MagicResistance, -Resist);
+    if ($HasAttribute("BardsValorSource", ThisAgent))
+        ThisAgent's "BardsValorSource" = $NullAgent();
+end
+
+function Bards_Refrain_Apply(agent Caster, agent Recipient)
+declare
+begin
+    // The combat resolver reads this private effect; equipment is never edited.
+    $CreateEffector(Recipient, "Bards_Refrain_Icon", 10000);
+    $CreateEffector(Recipient, "Bards_Refrain_Flash", 0);
+    if ($HasAttribute("BardsRefrainSource", Recipient) == FALSE)
+        $AddAttribute(Recipient, "BardsRefrainSource", "agentref", Caster);
+    else
+        Recipient's "BardsRefrainSource" = Caster;
+end
+
+function Bards_Refrain_End(agent ThisAgent)
+declare
+begin
+    if ($HasAttribute("BardsRefrainSource", ThisAgent))
+        ThisAgent's "BardsRefrainSource" = $NullAgent();
+end
+
+// The Manager retains the individual hero through native spell-unit births.
+// Query the current effect on that hero, never infer it from player ownership.
+function Bards_Refrain_Bonus(agent Source) is integer
+declare
+    agent Hero;
+begin
+    Hero = $MM_OriginalCaster(Source);
+    if (Hero == $NullAgent()) return 0;
+    // A saved origin is attribution, not proof of hero eligibility. Reject
+    // nonhero references even if another provider populated that attribute.
+    if ($HasAttribute("subtype", Hero) == FALSE) return 0;
+    if (Hero's "subtype" != "hero") return 0;
+    if ($CheckEffector(Hero, "Bards_Refrain_Icon")) return 3;
+    return 0;
+end
+
+function Bards_Reverberation_End(agent ThisAgent)
+declare
+begin
+    if ($HasAttribute("BardsResonance", ThisAgent)) ThisAgent's "BardsResonance" = 0;
+end
+
+function Bards_Countermelody_Apply(agent Caster, agent Recipient)
+declare
+    boolean Existing;
+begin
+    Existing = $CheckEffector(Recipient, "Bards_Countermelody_Icon");
+    $CreateEffector(Recipient, "Bards_Countermelody_Icon", 8000);
+    $CreateEffector(Recipient, "Bards_Counter_Flash", 0);
+    if (Existing == FALSE)
+        begin
+            $MagicalAdjustAttribute(Recipient, #ATTRIB_HtoH, -20);
+            $MagicalAdjustAttribute(Recipient, #ATTRIB_Ranged, -20);
+        end
+end
+
+function Bards_Countermelody_End(agent ThisAgent)
+declare
+begin
+    $MagicalAdjustAttribute(ThisAgent, #ATTRIB_HtoH, 20);
+    $MagicalAdjustAttribute(ThisAgent, #ATTRIB_Ranged, 20);
+end
+
+function Bards_Direct_Damage(agent Attacker, agent Defender, integer Damage) is integer
+declare
+begin
+    if (Damage <= 0)
+        return 0;
+    if ($CheckEffector(Defender, "Bards_Refrain_Icon"))
+        Damage -= 3;
+    if (Damage < 0)
+        Damage = 0;
+    return Damage;
+end

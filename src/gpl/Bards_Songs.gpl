@@ -1,0 +1,392 @@
+// Stock Healer action completion plus the Manager's native timing contract.
+// Support remains the unit's stock BasicScript/BackTarget assignment. Native
+// PerformAction owns action scheduling/interruption; no casting timer replaces it.
+
+function Bards_Song_Party(agent Caster) is list
+declare
+    list Heroes, Invisible, Camouflaged, Hidden, Party;
+    agent Hero;
+begin
+    $ListObjects(Caster, "Hero", 180, Heroes, #MyTeam);
+    $ListObjects(Caster, "Invisible", 180, Invisible, #MyTeam);
+    $ListObjects(Caster, "Camouflaged", 180, Camouflaged, #MyTeam);
+    $ListObjects(Caster, "Hidden", 180, Hidden, #MyTeam);
+    Heroes = $AddLists(Heroes, Invisible);
+    Heroes = $AddLists(Heroes, Camouflaged);
+    Heroes = $AddLists(Heroes, Hidden);
+    if ($AgentInList(Caster, Heroes) == FALSE) Heroes << Caster;
+    foreach Hero in Heroes do
+        if ($notvalid(Hero) == FALSE)
+            if (Hero's "subtype" == "Hero")
+                if ($GetPlayerTeamNumber(Hero) == $GetPlayerTeamNumber(Caster))
+                    if ($AgentInList(Hero, Party) == FALSE) Party << Hero;
+    return Party;
+end
+
+function Bards_Song_Refresh(agent Hero, string Effect) is boolean
+declare
+    integer Remaining;
+begin
+    // Saved BME1 reverses its old period delta through its existing expiry.
+    // Do not overlap it with the new BME2 movement-scale effect.
+    if (Effect == "Bards_March_Icon")
+        if ($CheckEffector(Hero, "Bards_March_Legacy_Icon")) return FALSE;
+    Remaining = $MM_EffectorRemaining(Hero, Effect);
+    // Negative includes an indefinite effect or a failed/undeclared query.
+    if (Remaining < 0) return FALSE;
+    if (Remaining <= 2000) return TRUE;
+    return FALSE;
+end
+
+// Stock offense has three dispatches; home defense uses berserk_defend.
+// BackScript retains each dispatch while its stock travel task closes range.
+function Bards_Hero_Attacking(agent Hero) is boolean
+declare
+begin
+    if ((Hero's "ActiveScript" == $attack_object) || (Hero's "BackScript" == $attack_object)) return TRUE;
+    if ((Hero's "ActiveScript" == $berserk) || (Hero's "BackScript" == $berserk)) return TRUE;
+    if ((Hero's "ActiveScript" == $berserk_defend) || (Hero's "BackScript" == $berserk_defend)) return TRUE;
+    return FALSE;
+end
+
+function Bards_Hero_Engaged(agent Hero) is boolean
+declare
+    agent Enemy;
+begin
+    $Cleanse_Hostiles(Hero);
+    if ($ListSize(Hero's "Hostiles") > 0) return TRUE;
+    if ($Bards_Hero_Attacking(Hero))
+        begin
+            Enemy = Hero's "Target";
+            if ($notvalid(Enemy) == FALSE)
+                if ($Bards_Hostile_Target(Hero, Enemy)) return TRUE;
+        end
+    return FALSE;
+end
+
+// Song-only combat eligibility. Stock attack_object and monster_attack_object
+// use getattackrange's weapon/spell selection before attacking versus traveling.
+function Bards_Song_Threat(agent Hero, agent Enemy) is boolean
+declare
+begin
+    if ($notvalid(Enemy)) return FALSE;
+    if ($Bards_Hostile_Target(Hero, Enemy) == FALSE) return FALSE;
+    if (Hero's "Target" == Enemy)
+        if ($Bards_Hero_Attacking(Hero))
+            if ($DistanceBetweenAgents(Hero, Enemy) <= $getattackrange(Hero)) return TRUE;
+    // A fleeing/supporting ally can still need protection from its attacker.
+    // Hostiles alone is insufficient: stock cleanse only removes invalid agents.
+    if ((Enemy's "type" == "Hero") || (Enemy's "type" == "Monster"))
+        if ($AgentInList(Enemy, Hero's "Hostiles"))
+            if (Enemy's "Target" == Hero)
+                if ($DistanceBetweenAgents(Enemy, Hero) <= $getattackrange(Enemy)) return TRUE;
+    return FALSE;
+end
+
+function Bards_Song_Engaged(agent Hero) is boolean
+declare
+    agent Enemy;
+    boolean Engaged;
+begin
+    $Cleanse_Hostiles(Hero);
+    Engaged = $Bards_Song_Threat(Hero, Hero's "Target");
+    foreach Enemy in Hero's "Hostiles" do
+        if (Engaged == FALSE)
+            if ($Bards_Song_Threat(Hero, Enemy)) Engaged = TRUE;
+    return Engaged;
+end
+
+function Bards_Can_Sing(agent Caster) is boolean
+declare
+begin
+    if ($notvalid_attacker(Caster)) return FALSE;
+    if (Caster's "title" != "Troubadour") return FALSE;
+    // Only the support task may start/complete songs. Weapon combat, fleeing,
+    // shopping and other task changes do not share this dispatch.
+    if (Caster's "ActiveScript" != $Bards_Follow_Support)
+        if ($Bards_Hall_Supporting(Caster) == FALSE) return FALSE;
+    if ($Bards_Hire_Guard(Caster)) return FALSE;
+    if ($IsMoving(Caster)) return FALSE;
+    if ($hasLowHP(Caster)) return FALSE;
+    if ($HasAttribute("BardsSongCompletedAt", Caster))
+        if ($MM_SimulationElapsed(Caster's "BardsSongCompletedAt") < 2000) return FALSE;
+    return TRUE;
+end
+
+function Bards_Song_Useful(agent Caster, list Party, string Song) is boolean
+declare
+    agent Hero;
+    boolean Useful;
+begin
+    Useful = FALSE;
+    foreach Hero in Party do
+        if (Useful == FALSE)
+            if ((Hero != Caster) || (Song == "Bards_March"))
+                begin
+                    if (Song == "Bards_Refrain")
+                        begin
+                            if ($Bards_Song_Refresh(Hero, "Bards_Refrain_Icon"))
+                                if ($Bards_Song_Engaged(Hero)) Useful = TRUE;
+                        end
+                    else if (Song == "Bards_March")
+                        begin
+                            if ($Bards_Song_Refresh(Hero, "Bards_March_Icon"))
+                                if ($Bards_March_Useful(Hero)) Useful = TRUE;
+                        end
+                    else
+                        if ($Bards_Song_Refresh(Hero, "Bards_Valor_Icon"))
+                            if ($Bards_Song_Engaged(Hero)) Useful = TRUE;
+                end
+    return Useful;
+end
+
+// March also uses stock TryTravelSpell during ordinary travel/exploration.
+// Only March receives this exception; fleeing and weapon combat do not.
+function Bards_Can_March(agent Caster) is boolean
+declare
+begin
+    if ($notvalid_attacker(Caster)) return FALSE;
+    if (Caster's "title" != "Troubadour") return FALSE;
+    if ((Caster's "ActiveScript" == $travel_to) || (Caster's "ActiveScript" == $travel_to_exp))
+        if (Caster's "BackScript" == $attack_object) return FALSE;
+    if (Caster's "ActiveScript" != $Bards_Follow_Support)
+        if ((Caster's "ActiveScript" != $Bards_Travel_Support) || (Caster's "BackScript" != $Bards_Follow_Support))
+            if ((Caster's "ActiveScript" != $travel_to) && (Caster's "ActiveScript" != $travel_to_exp))
+                if ($Bards_Hall_Supporting(Caster) == FALSE) return FALSE;
+    if ($Bards_Hire_Guard(Caster)) return FALSE;
+    if ($hasLowHP(Caster)) return FALSE;
+    if ($CheckEffector(Caster, "Bards_Countermelody_Icon")) return FALSE;
+    if ($HasAttribute("BardsSongCompletedAt", Caster))
+        if ($MM_SimulationElapsed(Caster's "BardsSongCompletedAt") < 2000) return FALSE;
+    return TRUE;
+end
+
+function Bards_Try_Travel_Song(agent Caster) is boolean
+declare
+    list Party;
+begin
+    if ($HasWayPoints(Caster)) return FALSE;
+    if ($Bards_Can_March(Caster) == FALSE) return FALSE;
+    if ($IsSpellAvailable(Caster, "Bards_March") == FALSE) return FALSE;
+    Party = $Bards_Song_Party(Caster);
+    if ($Bards_Song_Useful(Caster, Party, "Bards_March") == FALSE) return FALSE;
+    $PerformAction(Caster, "Bards_March", Caster);
+    return TRUE;
+end
+
+function Bards_Try_Song(agent Caster) is boolean
+declare
+    list Party;
+    agent SatireTarget;
+    boolean Valor, Satire, March;
+    string Song;
+    integer Wait;
+begin
+    if ($CheckEffector(Caster, "Bards_Countermelody_Icon")) return FALSE;
+    if ($Bards_Can_Sing(Caster) == FALSE) return $Bards_Try_Travel_Song(Caster);
+    Party = $Bards_Song_Party(Caster);
+    if ($IsSpellAvailable(Caster, "Bards_Refrain"))
+        if ($Bards_Song_Useful(Caster, Party, "Bards_Refrain"))
+            begin
+                $PerformAction(Caster, "Bards_Refrain", Caster);
+                return TRUE;
+            end
+    SatireTarget = $Bards_Satire_Target(Caster, Party);
+    Valor = $IsSpellAvailable(Caster, "Bards_Valor") && $Bards_Song_Useful(Caster, Party, "Bards_Valor");
+    March = $IsSpellAvailable(Caster, "Bards_March") && $Bards_Song_Useful(Caster, Party, "Bards_March");
+    Satire = $IsSpellAvailable(Caster, "Bards_Satire") && (SatireTarget != $NullAgent());
+    $Bards_Song_Wait_Update(Caster, "", Valor, Satire, March);
+    Song = "";
+    Wait = -1;
+    // Longest continuously useful wait wins. Equal waits retain ordinary
+    // Valor/Satire/March priority; stale or unavailable candidates were reset.
+    // Waiting until *two* before comparing ties can itself starve the third song.
+    if (Valor)
+        begin
+            Song = "Bards_Valor";
+            Wait = Caster's "BardsValorWait";
+        end
+    if (Satire && (Caster's "BardsSatireWait" > Wait))
+        begin
+            Song = "Bards_Satire";
+            Wait = Caster's "BardsSatireWait";
+        end
+    if (March && (Caster's "BardsMarchWait" > Wait)) Song = "Bards_March";
+    if (Song == "") return FALSE;
+    if (Song == "Bards_Satire") $PerformAction(Caster, Song, SatireTarget);
+    else $PerformAction(Caster, Song, Caster);
+    return TRUE;
+end
+
+function Bards_Song_Complete(agent Caster, string Song, string Effect)
+declare
+    list Party, Recipients;
+    agent Hero;
+begin
+    if (Song == "Bards_March")
+        begin
+            if ($Bards_Can_March(Caster) == FALSE) return;
+        end
+    else if ($Bards_Can_Sing(Caster) == FALSE) return;
+    if ($IsSpellAvailable(Caster, Song) == FALSE) return;
+    Party = $Bards_Song_Party(Caster);
+    if ($Bards_Song_Useful(Caster, Party, Song) == FALSE) return;
+    foreach Hero in Party do
+        if ($Bards_Song_Refresh(Hero, Effect)) Recipients << Hero;
+    if ($ListSize(Recipients) == 0) return;
+    // Exactly one native commit from successful stock action completion.
+    // Failed/cancelled actions never enter this branch; no CastSpell precharge.
+    if ($MM_CommitSpellCooldown(Caster, Song) != 1) return;
+    foreach Hero in Recipients do
+        begin
+            if (Song == "Bards_Valor") $Bards_Valor_Apply(Caster, Hero);
+            else if (Song == "Bards_March") $Bards_March_Apply(Caster, Hero);
+            else $Bards_Refrain_Apply(Caster, Hero);
+        end
+    $Bards_Song_Finished(Caster, Song, Party);
+    $Bards_Song_Experience(Caster, Song);
+    // Resume the existing support task; one award per useful completed song.
+end
+
+function Bards_Song_Experience(agent Caster, string Song)
+declare
+    integer Experience;
+begin
+    // Stock Cast's level-scaled formula with a quarter-sized base, rather than
+    // the Healer's triple award. Frequent songs supplement shared adventuring
+    // XP. Group size never multiplies the award.
+    Experience = #spell_exp * $GetSpellAttribute(Song, "character_level");
+    Experience = Experience / 4;
+    $give_exp(Caster, Experience);
+end
+
+function Bards_Song_Finished(agent Caster, string Song, list Party)
+declare
+    agent SatireTarget;
+    boolean Valor, Satire, March;
+begin
+    if ($HasAttribute("BardsSongCompletedAt", Caster) == FALSE)
+        $AddAttribute(Caster, "BardsSongCompletedAt", "integer", $MM_SimulationTime());
+    else
+        Caster's "BardsSongCompletedAt" = $MM_SimulationTime();
+    if (Song == "Bards_Refrain") return;
+    SatireTarget = $Bards_Satire_Target(Caster, Party);
+    Valor = $IsSpellAvailable(Caster, "Bards_Valor") && $Bards_Song_Useful(Caster, Party, "Bards_Valor");
+    March = $IsSpellAvailable(Caster, "Bards_March") && $Bards_Song_Useful(Caster, Party, "Bards_March");
+    Satire = $IsSpellAvailable(Caster, "Bards_Satire") && (SatireTarget != $NullAgent());
+    $Bards_Song_Wait_Update(Caster, Song, Valor, Satire, March);
+end
+
+function Bards_Valor_Complete(agent Caster, agent Target)
+declare
+begin
+    $Bards_Song_Complete(Caster, "Bards_Valor", "Bards_Valor_Icon");
+end
+
+function Bards_Refrain_Complete(agent Caster, agent Target)
+declare
+begin
+    $Bards_Song_Complete(Caster, "Bards_Refrain", "Bards_Refrain_Icon");
+end
+
+function Bards_March_Complete(agent Caster, agent Target)
+declare
+begin
+    $Bards_Song_Complete(Caster, "Bards_March", "Bards_March_Icon");
+end
+
+function Bards_Satire_Candidate(agent Caster, agent Enemy) is boolean
+declare
+begin
+    if ($notvalid(Enemy)) return FALSE;
+    if ($Bards_Hostile_Target(Caster, Enemy) == FALSE) return FALSE;
+    if ((Enemy's "type" != "Hero") && (Enemy's "type" != "Monster")) return FALSE;
+    if ($GetAttribute(Enemy, #ATTRIB_Strength) <= 5) return FALSE;
+    if ($GetAttribute(Enemy, #ATTRIB_HP) * 4 <= $GetAttribute(Enemy, #ATTRIB_MaxHP)) return FALSE;
+    if ($GetAttribute(Enemy, #ATTRIB_MagicResistance) >= 100) return FALSE;
+    if ($GetAttribute(Enemy, #ATTRIB_HasEffectMagicMirror) != 0) return FALSE;
+    return $Bards_Song_Refresh(Enemy, "Bards_Satire_Icon");
+end
+
+function Bards_Satire_Eligible(agent Caster, agent Enemy) is boolean
+declare
+begin
+    if ($Bards_Satire_Candidate(Caster, Enemy) == FALSE) return FALSE;
+    return ($DistanceBetweenAgents(Caster, Enemy) <= 180);
+end
+
+function Bards_Satire_Targets(agent Caster, list Party) is list
+declare
+    list Enemies, Candidates;
+    agent Hero, Enemy;
+begin
+    foreach Hero in Party do
+        if (Hero != Caster)
+            if ($Bards_Song_Engaged(Hero))
+                begin
+                    foreach Enemy in Hero's "Hostiles" do
+                        if ($Bards_Song_Threat(Hero, Enemy)) Candidates << Enemy;
+                    if ($Bards_Song_Threat(Hero, Hero's "Target"))
+                        Candidates << Hero's "Target";
+                end
+    foreach Enemy in Candidates do
+        if ($Bards_Satire_Eligible(Caster, Enemy))
+            if ($AgentInList(Enemy, Enemies) == FALSE) Enemies << Enemy;
+    return Enemies;
+end
+
+function Bards_Satire_Target(agent Caster, list Party) is agent
+declare
+    list Enemies;
+    agent Enemy, Best;
+    integer Score, BestScore;
+begin
+    Best = $NullAgent();
+    BestScore = 0;
+    Enemies = $Bards_Satire_Targets(Caster, Party);
+    foreach Enemy in Enemies do
+        begin
+            Score = $GetAttribute(Enemy, #ATTRIB_Strength);
+            if (Score > BestScore)
+                begin
+                    BestScore = Score;
+                    Best = Enemy;
+                end
+        end
+    return Best;
+end
+
+function Bards_Satire_Complete(agent Caster, agent Target)
+declare
+    list Party, Enemies;
+begin
+    if ($Bards_Can_Sing(Caster) == FALSE) return;
+    if ($IsSpellAvailable(Caster, "Bards_Satire") == FALSE) return;
+    if ($Bards_Satire_Eligible(Caster, Target) == FALSE) return;
+    Party = $Bards_Song_Party(Caster);
+    Enemies = $Bards_Satire_Targets(Caster, Party);
+    if ($AgentInList(Target, Enemies) == FALSE) return;
+    if ($MM_CommitSpellCooldown(Caster, "Bards_Satire") != 1) return;
+    // A completed hostile cast can be resisted normally; it still used its
+    // action/cooldown. Resistance does not create an effect or Renown evidence.
+    if ($spellhit(Target) == 1) $Bards_Satire_Apply(Caster, Target);
+    $Bards_Song_Finished(Caster, "Bards_Satire", Party);
+    $Bards_Song_Experience(Caster, "Bards_Satire");
+end
+
+function Bards_Song_Wait_Update(agent Caster, string Completed, boolean Valor, boolean Satire, boolean March)
+declare
+begin
+    if ($HasAttribute("BardsValorWait", Caster) == FALSE)
+        begin
+            $AddAttribute(Caster, "BardsValorWait", "integer", 0);
+            $AddAttribute(Caster, "BardsSatireWait", "integer", 0);
+            $AddAttribute(Caster, "BardsMarchWait", "integer", 0);
+        end
+    if ((Valor == FALSE) || (Completed == "Bards_Valor")) Caster's "BardsValorWait" = 0;
+    else if ((Completed != "") && (Caster's "BardsValorWait" < 2)) Caster's "BardsValorWait" += 1;
+    if ((Satire == FALSE) || (Completed == "Bards_Satire")) Caster's "BardsSatireWait" = 0;
+    else if ((Completed != "") && (Caster's "BardsSatireWait" < 2)) Caster's "BardsSatireWait" += 1;
+    if ((March == FALSE) || (Completed == "Bards_March")) Caster's "BardsMarchWait" = 0;
+    else if ((Completed != "") && (Caster's "BardsMarchWait" < 2)) Caster's "BardsMarchWait" += 1;
+end

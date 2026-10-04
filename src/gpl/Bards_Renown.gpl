@@ -1,0 +1,259 @@
+// Approved Renown extension at stock combat/death/guild-visit boundaries.
+// Native agent references and ordinary GPL attributes own the ledger. There is
+// no polling thread, elapsed-time counter, numeric unit-ID ledger, or payout on
+// cast. Save/load and resurrection still require a native integration exercise.
+
+function Bards_Hostile_Target(agent ThisAgent, agent Target) is boolean
+declare
+begin
+    if (Target == $NullAgent()) return FALSE;
+    if ($IsValidGamePiece(Target) == FALSE) return FALSE;
+    if ($GetUnitPlayerNumber(ThisAgent) == $GetUnitPlayerNumber(Target)) return FALSE;
+    if ($GetPlayerTeamNumber(ThisAgent) == $GetPlayerTeamNumber(Target)) return FALSE;
+    if ($GetPlayerTeamNumber(Target) == $NeutralTeamNumber()) return FALSE;
+    return TRUE;
+end
+
+function Bards_Renown_Contributor(agent Bard, agent Hero, agent Target)
+declare
+begin
+    if (Bard == $NullAgent()) return;
+    if (Bard == Hero) return;
+    if ($IsValidGamePiece(Bard) == FALSE) return;
+    if ($IsDead(Bard)) return;
+    if (Bard's "title" != "Troubadour") return;
+    if ($Bards_Jobs_Unlocked(Bard) == FALSE) return;
+    if ($GetPlayerTeamNumber(Bard) != $GetPlayerTeamNumber(Hero)) return;
+    if ($Bards_Hostile_Target(Bard, Target) == FALSE) return;
+    if ($HasAttribute("BardsRenownResolved", Target))
+        if (Target's "BardsRenownResolved") return;
+    if ($HasAttribute("BardsRenownContributors", Target) == FALSE)
+        $AddAttribute(Target, "BardsRenownContributors", "list");
+    if ($AgentInList(Bard, Target's "BardsRenownContributors") == FALSE)
+        Target's "BardsRenownContributors" << Bard;
+end
+
+function Bards_Renown_Hit(agent Hero, agent Target, integer Damage)
+declare
+begin
+    if (Damage <= 0) return;
+    if (Hero == $NullAgent()) return;
+    if ($IsValidGamePiece(Hero) == FALSE) return;
+    if (Hero's "subtype" != "Hero") return;
+    if ($Bards_Hostile_Target(Hero, Target) == FALSE) return;
+    if ($CheckEffector(Hero, "Bards_Valor_Icon"))
+        if ($HasAttribute("BardsValorSource", Hero))
+            $Bards_Renown_Contributor(Hero's "BardsValorSource", Hero, Target);
+    if ($CheckEffector(Hero, "Bards_Refrain_Icon"))
+        if ($HasAttribute("BardsRefrainSource", Hero))
+            $Bards_Renown_Contributor(Hero's "BardsRefrainSource", Hero, Target);
+    if ($CheckEffector(Hero, "Bards_March_Icon"))
+        if ($HasAttribute("BardsMarchSource", Hero))
+            $Bards_Renown_Contributor(Hero's "BardsMarchSource", Hero, Target);
+    if ($CheckEffector(Target, "Bards_Satire_Icon"))
+        if ($HasAttribute("BardsSatireSource", Target))
+            $Bards_Renown_Contributor(Target's "BardsSatireSource", Hero, Target);
+end
+
+function Bards_Renown_Completed_Bounty(agent Flag, agent Target)
+declare
+    agent Bard;
+begin
+    // Manager attack-flag-completed observer, inside the stock IsDead branch before
+    // flag deletion/team reversion. Record evidence, never settle a tale here:
+    // monster_gravestone must still confirm death or successful Zoo capture.
+    if ($IsValidGamePiece(Target) == FALSE) return;
+    if ($GetAttribute(Flag, #ATTRIB_RewardCost) <= 0) return;
+    if ($HasAttribute("BardsRenownContributors", Target) == FALSE) return;
+    if ($HasAttribute("BardsRenownBounty", Target) == FALSE)
+        $AddAttribute(Target, "BardsRenownBounty", "boolean", TRUE);
+    else
+        Target's "BardsRenownBounty" = TRUE;
+    // The stock callback reverts temporary attack-flag diplomacy afterward.
+    // Preserve actual hostility at completion, so that reversion does not erase
+    // an earned tale. This evidence cannot itself confirm a defeat/capture.
+    if ($HasAttribute("BardsRenownBountyContributors", Target) == FALSE)
+        $AddAttribute(Target, "BardsRenownBountyContributors", "list");
+    foreach Bard in Target's "BardsRenownContributors" do
+        if ($IsValidGamePiece(Bard))
+            if ($IsDead(Bard) == FALSE)
+                if ($Bards_Hostile_Target(Bard, Target))
+                    if ($AgentInList(Bard, Target's "BardsRenownBountyContributors") == FALSE)
+                        Target's "BardsRenownBountyContributors" << Bard;
+end
+
+function Bards_Renown_Has_Bounty(agent Target) is boolean
+declare
+    list Flags;
+    agent Flag;
+    boolean Found;
+begin
+    if ($HasAttribute("BardsRenownBounty", Target))
+        if (Target's "BardsRenownBounty") return TRUE;
+    // If the confirmed-death script precedes the engine's flag callback, the
+    // actual positive attack flag is still attached to this exact gamepiece.
+    $ListObjects(Target, "RewardFlag", -1, Flags, #rewardflags, #NoHiddenMap, #CheckTitles, "Flag_Attack");
+    Found = FALSE;
+    foreach Flag in Flags do
+        if (Found == FALSE)
+            if ($GetAttribute(Flag, #ATTRIB_RewardCost) > 0)
+                if ($AgentNumber($GetAttribute(Flag, #ATTRIB_TargetID)) == Target)
+                    Found = TRUE;
+    return Found;
+end
+
+function Bards_Renown_Rank(agent Target) is integer
+declare
+    integer LevelXP;
+begin
+    LevelXP = $GetAttribute(Target, #ATTRIB_LevelXP);
+    if (LevelXP <= 230) return 1;
+    if (LevelXP <= 400) return 2;
+    if (LevelXP <= 500) return 3;
+    if (LevelXP <= 900) return 4;
+    if (LevelXP <= 1500) return 5;
+    if (LevelXP <= 2000) return 6;
+    if (LevelXP <= 3500) return 7;
+    return 8;
+end
+
+function Bards_Renown_Award(agent Bard, agent Target, integer Kind, boolean Bounty)
+declare
+    integer Gold, XP, Rank;
+    boolean HostileAtCompletion;
+begin
+    if (Bard == $NullAgent()) return;
+    if ($IsValidGamePiece(Bard) == FALSE) return;
+    if ($IsDead(Bard)) return;
+    if (Bard's "title" != "Troubadour") return;
+    if ($Bards_Jobs_Unlocked(Bard) == FALSE) return;
+    if ($DistanceBetweenAgents(Bard, Target) > 300) return;
+    HostileAtCompletion = $Bards_Hostile_Target(Bard, Target);
+    // Kind 3 is reached only from a successful stock Zoo capture. Control_Monster
+    // has already changed ownership; the consumed contribution list established
+    // actual hostile support before capture. Do not reject it as allied property.
+    if (Kind == 3) HostileAtCompletion = TRUE;
+    if (Bounty)
+        if ($HasAttribute("BardsRenownBountyContributors", Target))
+            if ($AgentInList(Bard, Target's "BardsRenownBountyContributors")) HostileAtCompletion = TRUE;
+    if (HostileAtCompletion == FALSE) return;
+    Gold = 0;
+    XP = 0;
+    if (Bounty)
+        begin
+            Gold = 25;
+            XP = 75;
+        end
+    if (Kind == 2)
+        begin
+            Gold = 50;
+            XP = 150;
+        end
+    if ((Kind == 1) || (Kind == 3))
+        begin
+            Rank = $Bards_Renown_Rank(Target);
+            if ((Rank >= 6) || (Rank >= $GetAttribute(Bard, #ATTRIB_ExperienceLevel)))
+                begin
+                    Gold = 75;
+                    XP = 250;
+                end
+        end
+    if (Gold == 0) return;
+    if ($HasAttribute("BardsRenownGold", Bard) == FALSE)
+        $AddAttribute(Bard, "BardsRenownGold", "integer", 0);
+    if ($HasAttribute("BardsRenownXP", Bard) == FALSE)
+        $AddAttribute(Bard, "BardsRenownXP", "integer", 0);
+    Bard's "BardsRenownGold" += Gold;
+    Bard's "BardsRenownXP" += XP;
+end
+
+function Bards_Renown_Defeat(agent Target, integer Kind)
+declare
+    list Contributors, Empty;
+    agent Bard;
+    boolean Bounty;
+begin
+    $Bards_Finale_Defeat(Target, Kind);
+    // Kind 1 = monster death; 3 = successful Zoo capture; 2 = lair; 0 = bounty only.
+    if ($HasAttribute("BardsRenownContributors", Target) == FALSE) return;
+    if ($HasAttribute("BardsRenownResolved", Target))
+        if (Target's "BardsRenownResolved") return;
+    Bounty = $Bards_Renown_Has_Bounty(Target);
+    if ($HasAttribute("BardsRenownResolved", Target) == FALSE)
+        $AddAttribute(Target, "BardsRenownResolved", "boolean", TRUE);
+    else
+        Target's "BardsRenownResolved" = TRUE;
+    Contributors = Target's "BardsRenownContributors";
+    Target's "BardsRenownContributors" = Empty;
+    // Resolve once before awarding; each qualified contributor gets the full
+    // highest tier. Totals on the bard freeze eligibility at this completion.
+    foreach Bard in Contributors do
+        $Bards_Renown_Award(Bard, Target, Kind, Bounty);
+    if ($HasAttribute("BardsRenownBountyContributors", Target))
+        Target's "BardsRenownBountyContributors" = Empty;
+end
+
+function Bards_Renown_Captured(agent Target)
+declare
+    list Empty;
+begin
+    // The stock success branch confirms the deed after charm changes ownership.
+    // Use the ordinary monster tier/bounty fallback and once-only resolution,
+    // then clear transient encounter evidence without touching capture control.
+    $Bards_Renown_Defeat(Target, 3);
+    if ($HasAttribute("BardsRenownContributors", Target))
+        Target's "BardsRenownContributors" = Empty;
+    if ($HasAttribute("BardsRenownBounty", Target))
+        Target's "BardsRenownBounty" = FALSE;
+    if ($HasAttribute("BardsRenownBountyContributors", Target))
+        Target's "BardsRenownBountyContributors" = Empty;
+end
+
+function Bards_Renown_Settle(agent Bard, agent Guild)
+declare
+    integer Gold, XP;
+begin
+    if (Bard's "title" != "Troubadour") return;
+    if ($IsDead(Bard)) return;
+    if ($Bards_Jobs_Unlocked(Bard) == FALSE) return;
+    if (Guild's "title" != "Bards_Hall") return;
+    if (Guild's "Level" < 2) return;
+    if ($GetUnitPlayerNumber(Bard) != $GetUnitPlayerNumber(Guild)) return;
+    if ($HasAttribute("BardsRenownGold", Bard) == FALSE) return;
+    Gold = Bard's "BardsRenownGold";
+    XP = Bard's "BardsRenownXP";
+    Bard's "BardsRenownGold" = 0;
+    Bard's "BardsRenownXP" = 0;
+    if (Gold > 0) $Give_Gold(Bard, Gold);
+    // Payouts are base bonus XP, using stock level scaling and level-up callbacks.
+    if (XP > 0) $give_exp(Bard, XP);
+end
+
+// Tax-collector-style threshold at existing AI decisions, using stock go_home.
+function Bards_Renown_Return(agent Bard) is boolean
+declare
+    agent Leader;
+begin
+    if (Bard's "title" != "Troubadour") return FALSE;
+    if ($HasAttribute("BardsRenownGold", Bard) == FALSE) return FALSE;
+    if (Bard's "BardsRenownGold" < 300) return FALSE;
+    if ($Bards_Jobs_Unlocked(Bard) == FALSE) return FALSE;
+    if ($InsideBuilding(Bard)) return FALSE;
+    // Paid contracts and accepted quests retain their existing completion owner.
+    if ($Bards_Hire_Assigned(Bard)) return FALSE;
+    if ($HasAttribute("AGAcceptedQuest", Bard))
+        if (Bard's "AGAcceptedQuest" == Bard) return FALSE;
+    if ($Bards_Song_Engaged(Bard)) return FALSE;
+    if ($HasAttribute("BackTarget", Bard))
+        if (Bard's "BasicScript" != Bard's "StartingScript")
+            begin
+                Leader = Bard's "BackTarget";
+                if ($notvalid(Leader) == FALSE)
+                    if ($Bards_Song_Engaged(Leader)) return FALSE;
+            end
+    // Ordinary follow is complete. Free its assignment before native home travel.
+    Bard's "BasicScript" = Bard's "StartingScript";
+    Bard's "BackTarget" = $NullAgent();
+    $reset_tasks(Bard);
+    return $go_home(Bard, 100);
+end

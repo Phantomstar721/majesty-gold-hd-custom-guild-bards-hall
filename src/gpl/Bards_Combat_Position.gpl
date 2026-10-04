@@ -1,0 +1,101 @@
+// Approved generic two-target positioning option. No spell/class decisions here.
+// Existing support dispatch owns updates; native Move owns pathfinding/orders.
+// Center-distance planning is conservative; native agent ranges decide arrival.
+function Bards_Combat_Position(agent Caster, agent Leader, agent Enemy, integer CastRange, integer FollowRange) is boolean
+declare
+    coordinate Origin, Aim, Destination;
+    integer Distance, Offset, X, Y;
+begin
+    if ($notvalid(Leader)) return FALSE;
+    if ($notvalid(Enemy)) return FALSE;
+    if ((CastRange <= 8) || (FollowRange <= 8)) return FALSE;
+    if ($DistanceBetweenAgents(Caster, Leader) > FollowRange) return FALSE;
+    if ($DistanceBetweenAgents(Caster, Enemy) <= CastRange)
+        begin
+            if (Caster's "Target" == Enemy) $StopMoving(Caster);
+            Caster's "Target" = Leader;
+            return FALSE;
+        end
+    Origin = $LocationOf(Leader);
+    Aim = $LocationOf(Enemy);
+    Distance = $DistanceBetweenCoords(Origin, Aim);
+    // Leave a small margin for arrival rounding and moving targets. If the
+    // ranges do not overlap, retain the follow assignment instead of chasing.
+    if (Distance > (CastRange + FollowRange - 16)) return FALSE;
+    if (Distance <= 0) return FALSE;
+    Offset = Distance - (CastRange - 8);
+    if (Offset < 0) Offset = 0;
+    X = $GetX(Origin) + ($GetX(Aim) - $GetX(Origin)) * Offset / Distance;
+    Y = $GetY(Origin) + ($GetY(Aim) - $GetY(Origin)) * Offset / Distance;
+    Destination = $MakeCoord(X, Y);
+    if (Caster's "Target" == Enemy)
+        if ($IsMoving(Caster))
+            if ($DistanceBetweenCoords(Caster's "Destination", Destination) < 16) return TRUE;
+    // Do not restart a blocked native order at the same destination forever.
+    if (Caster's "Target" == Enemy)
+        if ($IsMoving(Caster) == FALSE)
+            if ($DistanceBetweenCoords(Caster's "Destination", Destination) < 16) return TRUE;
+    Caster's "Target" = Enemy;
+    Caster's "Destination" = Destination;
+    $Move(Caster, Destination, "avoid_vehicles");
+    return TRUE;
+end
+
+function Bards_Combat_Position_End(agent Caster, agent Leader)
+declare
+begin
+    if (Caster's "Target" != Leader)
+        begin
+            $StopMoving(Caster);
+            Caster's "Target" = Leader;
+        end
+end
+
+// All ordinary, hired and quest support share this option. Buffs come first;
+// the spell-specific caller supplies both ranges to the generic positioning.
+function Bards_Combat_Support(agent Caster, agent Leader) is boolean
+declare
+    agent Enemy;
+    list Party;
+begin
+    if ($notvalid(Leader)) return FALSE;
+    if ($InsideBuilding(Leader)) return FALSE;
+    if ($hasLowHP(Caster)) return FALSE;
+    if ($Bards_Song_Engaged(Leader) == FALSE)
+        begin
+            $Bards_Combat_Position_End(Caster, Leader);
+            return FALSE;
+        end
+    if ($Bards_Troubadour_Evaluate(Caster)) return TRUE;
+    if ($DistanceBetweenAgents(Caster, Leader) > 180)
+        begin
+            $Bards_Combat_Position_End(Caster, Leader);
+            return FALSE;
+        end
+    Enemy = Leader's "Target";
+    if (Caster's "Target" != Leader)
+        begin
+            Party = $Bards_Song_Party(Caster);
+            if ($IsSpellAvailable(Caster, "Bards_Valor"))
+                if ($Bards_Song_Useful(Caster, Party, "Bards_Valor"))
+                    $Bards_Combat_Position_End(Caster, Leader);
+            if ($IsSpellAvailable(Caster, "Bards_Refrain"))
+                if ($Bards_Song_Useful(Caster, Party, "Bards_Refrain"))
+                    $Bards_Combat_Position_End(Caster, Leader);
+        end
+    // Stop an owned approach once it reaches cast range before checking songs.
+    if (Caster's "Target" != Leader)
+        if ($notvalid(Enemy) == FALSE)
+            if ($DistanceBetweenAgents(Caster, Enemy) <= 180)
+                $Bards_Combat_Position_End(Caster, Leader);
+    if ($Bards_Try_Song(Caster)) return TRUE;
+    if ($CheckEffector(Caster, "Bards_Countermelody_Icon") == FALSE)
+        if ($IsSpellAvailable(Caster, "Bards_Satire"))
+            if ($Bards_Song_Threat(Leader, Enemy))
+                if ($Bards_Satire_Candidate(Caster, Enemy))
+                    if ($Bards_Combat_Position(Caster, Leader, Enemy, 180, 180)) return TRUE;
+    $Bards_Combat_Position_End(Caster, Leader);
+    // Stay at a useful support position during combat rather than doing the
+    // stock bored-follower wander or pulling back to its tighter travel radius.
+    return TRUE;
+end

@@ -1,0 +1,210 @@
+// Approved combat-event extension. Stock attack resolution and confirmed death
+// callbacks own dispatch. No polling, added threads, or combat-stat mutations.
+function Bards_Finale_Unmark(agent Dancer)
+declare
+    agent Target, Other;
+    list Heroes, Hidden, Invisible, Camouflaged;
+    boolean Retain;
+begin
+    if ($HasAttribute("BardsFinaleTarget", Dancer) == FALSE) return;
+    Target = Dancer's "BardsFinaleTarget";
+    Dancer's "BardsFinaleTarget" = $NullAgent();
+    if ($IsValidGamePiece(Target) == FALSE) return;
+    // One stock overlay can represent several Dancers' existing preparations.
+    // Releasing one must not erase another living Dancer's target marker.
+    $ListObjects(Target, "Hero", -1, Heroes, #NoHiddenMap, #CheckTitles, "Blade_Dancer");
+    $ListObjects(Target, "Hidden", -1, Hidden, #NoHiddenMap, #CheckTitles, "Blade_Dancer");
+    $ListObjects(Target, "Invisible", -1, Invisible, #NoHiddenMap, #CheckTitles, "Blade_Dancer");
+    $ListObjects(Target, "Camouflaged", -1, Camouflaged, #NoHiddenMap, #CheckTitles, "Blade_Dancer");
+    Heroes = $AddLists(Heroes, Hidden);
+    Heroes = $AddLists(Heroes, Invisible);
+    Heroes = $AddLists(Heroes, Camouflaged);
+    Retain = FALSE;
+    foreach Other in Heroes do
+        if ($notvalid_attacker(Other) == FALSE)
+            if ($HasAttribute("BardsFinaleTarget", Other))
+                if (Other's "BardsFinaleTarget" == Target) Retain = TRUE;
+    if (Retain == FALSE) $DeleteEffector(Target, "Bards_Finale_Ready_Icon");
+end
+
+function Bards_Finale_Mark(agent Dancer, agent Target)
+declare
+begin
+    if ($HasAttribute("BardsFinaleTarget", Dancer))
+        if (Dancer's "BardsFinaleTarget" != Target) $Bards_Finale_Unmark(Dancer);
+    if ($HasAttribute("BardsFinaleTarget", Dancer) == FALSE)
+        $AddAttribute(Dancer, "BardsFinaleTarget", "agentref", Target);
+    else Dancer's "BardsFinaleTarget" = Target;
+    if ($CheckEffector(Target, "Bards_Finale_Ready_Icon") == FALSE)
+        $CreateEffector(Target, "Bards_Finale_Ready_Icon", 1, "Infinite");
+end
+
+function Bards_Finale_Ready_End(agent Target)
+declare
+begin
+    // Cosmetic only. Parent death cleanup remains owned by the native overlay.
+end
+
+function Bards_Finale_Attempt(agent Dancer, agent Target)
+declare
+begin
+    if ($Bards_Dancer_Level(Dancer, 8) == FALSE) return;
+    if ($notvalid(Target)) return;
+    if ($HasAttribute("BardsFinaleOwner", Dancer) == FALSE)
+        $AddAttribute(Dancer, "BardsFinaleOwner", "integer", $GetUnitPlayerNumber(Dancer));
+    if (Dancer's "BardsFinaleOwner" != $GetUnitPlayerNumber(Dancer))
+        begin
+            $Bards_Finale_Clear(Dancer);
+            Dancer's "BardsFinaleOwner" = $GetUnitPlayerNumber(Dancer);
+        end
+    if ($HasAttribute("BardsFinaleTarget", Dancer) == FALSE)
+        $AddAttribute(Dancer, "BardsFinaleTarget", "agentref", $NullAgent());
+    if (Dancer's "BardsFinaleTarget" != Target)
+        $Bards_Finale_Unmark(Dancer);
+    if (Dancer's "TaskName" == "Bards_Prize_Duel") return;
+    if ($Bards_Hostile_Target(Dancer, Target) == FALSE) return;
+    if ((Target's "type" != "Monster") && (Target's "subtype" != "Hero")) return;
+    // Restore presentation for a preparation saved before markers were added.
+    if (Dancer's "BardsFinaleTarget" == Target) $Bards_Finale_Mark(Dancer, Target);
+    if ($HasAttribute("BardsEncore", Dancer))
+        if (Dancer's "BardsEncore")
+            begin
+                Dancer's "BardsEncore" = FALSE;
+                $DeleteEffector(Dancer, "Bards_Encore_Icon");
+                $Bards_Finale_Mark(Dancer, Target);
+            end
+end
+
+function Bards_Finale_Arm(agent Dancer, agent Target)
+declare
+begin
+    if (Target's "type" != "Monster") return;
+    $Bards_Finale_Mark(Dancer, Target);
+end
+
+function Bards_Finale_Record(agent Attacker, agent Defender, integer Damage)
+declare
+begin
+    // A lethal-hit candidate is not an award: capture and death dispatch decide.
+    if ($HasAttribute("BardsFinaleKiller", Defender))
+        Defender's "BardsFinaleKiller" = $NullAgent();
+    if ($Bards_Dancer_Level(Attacker, 8) == FALSE) return;
+    if ($Bards_Hostile_Target(Attacker, Defender) == FALSE) return;
+    if ($HasAttribute("BardsFinaleTarget", Attacker) == FALSE) return;
+    if (Attacker's "BardsFinaleTarget" != Defender) return;
+    if ($GetAttribute(Defender, #ATTRIB_HP) <= 0) return;
+    if (Damage < $GetAttribute(Defender, #ATTRIB_HP)) return;
+    if ($HasAttribute("BardsFinaleKiller", Defender) == FALSE)
+        $AddAttribute(Defender, "BardsFinaleKiller", "agentref", Attacker);
+    else Defender's "BardsFinaleKiller" = Attacker;
+end
+
+function Bards_Finale_Defeat(agent Target, integer Kind)
+declare
+    agent Dancer, Hero;
+    list Party;
+begin
+    if ($HasAttribute("BardsFinaleKiller", Target) == FALSE) return;
+    Dancer = Target's "BardsFinaleKiller";
+    Target's "BardsFinaleKiller" = $NullAgent();
+    if ((Kind != 1) && (Kind != 0)) return;
+    if ($GetAttribute(Target, #ATTRIB_HP) > 0) return;
+    if ($Bards_Dancer_Level(Dancer, 8) == FALSE) return;
+    if (Dancer's "BardsFinaleTarget" != Target) return;
+    $Bards_Finale_Unmark(Dancer);
+    if ($HasAttribute("BardsFinalePending", Dancer) == FALSE)
+        $AddAttribute(Dancer, "BardsFinalePending", "boolean", TRUE);
+    else Dancer's "BardsFinalePending" = TRUE;
+end
+
+// Consume the approved pending event only from ordinary AI decision dispatch.
+// Never replace an action from inside the victim's death/damage callback.
+function Bards_Try_Finale(agent Dancer) is boolean
+declare
+begin
+    if ($HasAttribute("BardsFinalePending", Dancer) == FALSE) return FALSE;
+    if (Dancer's "BardsFinalePending" == FALSE) return FALSE;
+    if ($Bards_Dancer_Level(Dancer, 8) == FALSE) return FALSE;
+    if (Dancer's "BardsFinaleOwner" != $GetUnitPlayerNumber(Dancer))
+        begin
+            $Bards_Finale_Clear(Dancer);
+            return FALSE;
+        end
+    if ($IsFrozen(Dancer)) return FALSE;
+    if ($hasLowHP(Dancer)) return FALSE;
+    Dancer's "BardsFinalePending" = FALSE;
+    if ($HasAttribute("BardsFinaleCasting", Dancer) == FALSE)
+        $AddAttribute(Dancer, "BardsFinaleCasting", "boolean", TRUE);
+    else Dancer's "BardsFinaleCasting" = TRUE;
+    $PerformAction(Dancer, "Bards_Finale_Cast", Dancer);
+    return TRUE;
+end
+
+function Bards_Finale_Complete(agent Dancer, agent Target)
+declare
+    agent Hero;
+    list Party;
+begin
+    if ($Bards_Dancer_Level(Dancer, 8) == FALSE) return;
+    if ($HasAttribute("BardsFinaleCasting", Dancer) == FALSE) return;
+    if (Dancer's "BardsFinaleCasting" == FALSE) return;
+    Dancer's "BardsFinaleCasting" = FALSE;
+    if (Dancer's "BardsFinaleOwner" != $GetUnitPlayerNumber(Dancer)) return;
+    if ($HasAttribute("BardsEncore", Dancer) == FALSE)
+        $AddAttribute(Dancer, "BardsEncore", "boolean", TRUE);
+    else Dancer's "BardsEncore" = TRUE;
+    // Stock Charm/Magic Ring indefinite icon: saved natively, removed by the
+    // same event that consumes the charge. No periodic display synchronization.
+    $CreateEffector(Dancer, "Bards_Finale_Flash", 0);
+    $CreateEffector(Dancer, "Bards_Encore_Icon", 1, "Infinite");
+    Party = $Bards_Song_Party(Dancer);
+    foreach Hero in Party do $Bards_Roused_Apply(Hero);
+end
+
+function Bards_Finale_Clear(agent Dancer)
+declare
+begin
+    if ($HasAttribute("BardsFinalePending", Dancer)) Dancer's "BardsFinalePending" = FALSE;
+    if ($HasAttribute("BardsFinaleCasting", Dancer)) Dancer's "BardsFinaleCasting" = FALSE;
+    $Bards_Finale_Unmark(Dancer);
+    if ($HasAttribute("BardsEncore", Dancer)) Dancer's "BardsEncore" = FALSE;
+    $DeleteEffector(Dancer, "Bards_Encore_Icon");
+end
+
+function Bards_Encore_End(agent Hero)
+declare
+begin
+    // Native removal (including death/effect cleanup) cannot leave an invisible
+    // banked charge. This callback never removes or recreates an effector.
+    if ($HasAttribute("BardsEncore", Hero)) Hero's "BardsEncore" = FALSE;
+end
+
+// Stock Blessing-style timed delta ownership, including refresh and reversal.
+function Bards_Roused_Apply(agent Hero)
+declare
+    boolean Existing;
+begin
+    Existing = $CheckEffector(Hero, "Bards_Roused_Icon");
+    $CreateEffector(Hero, "Bards_Roused_Icon", 120000);
+    if (Existing == FALSE)
+        begin
+            $CreateEffector(Hero, "Bards_Finale_Flash", 0);
+            $MagicalAdjustAttribute(Hero, #ATTRIB_Parry, 5);
+            $MagicalAdjustAttribute(Hero, #ATTRIB_Dodge, 5);
+        end
+end
+
+function Bards_Roused_End(agent Hero)
+declare
+begin
+    $MagicalAdjustAttribute(Hero, #ATTRIB_Parry, -5);
+    $MagicalAdjustAttribute(Hero, #ATTRIB_Dodge, -5);
+end
+
+function Bards_Roused_Stand(agent Hero) is boolean
+declare
+begin
+    if ($CheckEffector(Hero, "Bards_Roused_Icon") == FALSE) return FALSE;
+    if ($hasLowHP(Hero)) return FALSE;
+    return ($RandomNumber(100) < 25);
+end

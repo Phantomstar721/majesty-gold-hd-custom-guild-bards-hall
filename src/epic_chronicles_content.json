@@ -1,0 +1,22 @@
+{
+  "content_schema": "bards-epic-chronicles/v1",
+  "key": "epic-chronicles",
+  "name": "Epic Chronicles",
+  "research_price": 3000,
+  "required_guild_level": 3,
+  "gold_bonus_percent": 15,
+  "experience_bonus_percent": 15,
+  "beneficiaries": "owned-heroes",
+  "purchase_scope": "kingdom",
+  "purchase_survives_guild_loss": true,
+  "activation": "owned-living-completed-level-3-guild",
+  "restores_without_repurchase": true,
+  "stacks": false,
+  "building_title": "Bards_Hall",
+  "building_ids": ["BDG1", "BDG2", "BDG3"],
+  "research_description": "Research Epic Chronicles for 3000 gold. All heroes in your kingdom earn 15% more gold and experience while you own a completed level-3 Bards Hall. Research is purchased only once; rebuilding a level-3 guild restores its benefit for free.",
+  "active_description": "Epic Chronicles: your heroes earn 15% more gold and experience.",
+  "inactive_description": "Epic Chronicles researched. Complete a level-3 Bards Hall to restore the bonus.",
+  "gold_exclusions": ["transfers", "refunds", "stored-gold-withdrawals", "starting-purses", "building-revenue", "treasury-income"],
+  "experience_exclusions": ["direct-level-assignment", "level-restoration"]
+}

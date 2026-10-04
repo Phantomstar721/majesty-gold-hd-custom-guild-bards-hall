@@ -1,0 +1,338 @@
+// Existing hero decisions and action completions own all world queries.
+// The Manager's shared activity service owns session and audience dwell time.
+
+function Bards_Street_Town(agent Singer) is agent
+declare
+    list Buildings;
+    agent Building, Selected;
+begin
+    $ListObjects(Singer, "Building", 180, Buildings, #MyPlayer);
+    Selected = $NullAgent();
+    foreach Building in Buildings do
+        if (Selected == $NullAgent())
+            if ($Bards_Hire_Alive(Building))
+                if ($GetAttribute(Building, #ATTRIB_FirstStageBuilt) == 1)
+                    if ((Building's "title" == "Marketplace") || (Building's "title" == "Palace") || (Building's "title" == "Bards_Hall"))
+                        Selected = Building;
+    return Selected;
+end
+
+function Bards_Street_Active(agent Singer) is boolean
+declare
+begin
+    if ($Bards_Hire_Alive(Singer) == FALSE) return FALSE;
+    if ($Bards_Jobs_Unlocked(Singer) == FALSE) return FALSE;
+    if ($HasAttribute("BardsStreetActive", Singer) == FALSE) return FALSE;
+    if (Singer's "BardsStreetActive" == FALSE) return FALSE;
+    if (Singer's "ActiveScript" != $Bards_Street_Perform) return FALSE;
+    if ($InsideBuilding(Singer)) return FALSE;
+    if ($IsMoving(Singer)) return FALSE;
+    if ($IsFrozen(Singer)) return FALSE;
+    if ($Bards_Hire_Assigned(Singer)) return FALSE;
+    if ($GetUnitPlayerNumber(Singer) != Singer's "BardsStreetPlayer") return FALSE;
+    if ($GetAttribute(Singer, #ATTRIB_HP) < Singer's "BardsStreetHP") return FALSE;
+    if ($hasLowHP(Singer)) return FALSE;
+    if ($Bards_Hire_Alive(Singer's "BardsStreetTown") == FALSE) return FALSE;
+    if ($GetUnitPlayerNumber(Singer's "BardsStreetTown") != Singer's "BardsStreetPlayer") return FALSE;
+    if ($DistanceBetweenAgents(Singer, Singer's "BardsStreetTown") > 180) return FALSE;
+    return TRUE;
+end
+
+function Bards_Street_Listener(agent Singer, agent Listener) is boolean
+declare
+begin
+    if ($Bards_Hire_Alive(Listener) == FALSE) return FALSE;
+    if ($GetUnitPlayerNumber(Listener) != $GetUnitPlayerNumber(Singer)) return FALSE;
+    if ($InsideBuilding(Listener)) return FALSE;
+    if ($IsFrozen(Listener)) return FALSE;
+    if ($Bards_Is_Bard(Listener)) return FALSE;
+    if ((Listener's "title" == "Tax_Collector") || (Listener's "title" == "Caravan")) return FALSE;
+    if (Listener's "title" == "Peasant") return TRUE;
+    if (Listener's "subtype" != "Hero") return FALSE;
+    // Only a real hero's carried purse may fund a tip. Civilian cargo is never
+    // consulted, including tax collectors, caravans and controlled creatures.
+    return ($GetAttribute(Listener, #ATTRIB_Gold) >= 53);
+end
+
+function Bards_Street_Eligible(agent Singer, agent Listener) is boolean
+declare
+begin
+    if ($Bards_Street_Listener(Singer, Listener) == FALSE) return FALSE;
+    if ($DistanceBetweenAgents(Singer, Listener) > 100) return FALSE;
+    if ($HasAttribute("BardsStreetPaidAt", Listener))
+        if ($MM_SimulationElapsed(Listener's "BardsStreetPaidAt") < 60000) return FALSE;
+    return TRUE;
+end
+
+function Bards_Street_Release(agent Listener, agent Singer, integer Key)
+declare
+begin
+    if ($IsValidGamePiece(Listener) == FALSE) return;
+    if ($HasAttribute("BardsStreetHost", Listener) == FALSE) return;
+    if (Listener's "BardsStreetHost" != Singer) return;
+    if (Listener's "BardsStreetKey" != Key) return;
+    Listener's "BardsStreetHost" = $NullAgent();
+end
+
+function Bards_Street_Clean(agent Singer)
+declare
+    list Pending;
+    agent Listener;
+    integer Result, Key;
+begin
+    if ($HasAttribute("BardsStreetAudience", Singer) == FALSE) return;
+    foreach Listener in Singer's "BardsStreetAudience" do
+        if ($IsValidGamePiece(Listener))
+            if (Listener's "BardsStreetHost" == Singer)
+                begin
+                    Key = Listener's "BardsStreetKey";
+                    Result = $Bards_Audience_Cancel(Listener, Key);
+                    if (Result == -3) Pending << Listener;
+                    else $Bards_Street_Release(Listener, Singer, Key);
+                end
+    Singer's "BardsStreetAudience" = Pending;
+end
+
+function Bards_Street_End(agent Singer)
+declare
+begin
+    if ($IsValidGamePiece(Singer) == FALSE) return;
+    if ($HasAttribute("BardsStreetActive", Singer) == FALSE) return;
+    // Make queued terminal notifications ineligible before cancelling records.
+    Singer's "BardsStreetActive" = FALSE;
+    $Bards_Street_Clean(Singer);
+    $Bards_Show_Cancel(Singer, 1);
+    if ($IsDead(Singer) == FALSE)
+        if (Singer's "ActiveScript" == $Bards_Street_Perform) $reset_tasks(Singer);
+end
+
+function Bards_Street_Service(agent Singer)
+declare
+begin
+    if ($IsValidGamePiece(Singer) == FALSE) return;
+    if ($HasAttribute("BardsStreetActive", Singer) == FALSE) return;
+    if (Singer's "BardsStreetActive" == FALSE)
+        if ($ListSize(Singer's "BardsStreetAudience") == 0)
+            if ($Bards_Show_State(Singer, 1) == 0) return;
+    if ($Bards_Street_Active(Singer) == FALSE) $Bards_Street_End(Singer);
+end
+
+function Bards_Street_Check(agent Singer) is boolean
+declare
+    agent Town;
+    list Enemies;
+    integer Result;
+begin
+    $Bards_Street_Service(Singer);
+    if ($notvalid_attacker(Singer)) return FALSE;
+    if (Singer's "title" != "Spellsinger") return FALSE;
+    if ($Bards_Jobs_Unlocked(Singer) == FALSE) return FALSE;
+    if ($InsideBuilding(Singer)) return FALSE;
+    if ($IsMoving(Singer)) return FALSE;
+    if ($IsFrozen(Singer)) return FALSE;
+    if ($hasLowHP(Singer)) return FALSE;
+    if ($Bards_Hire_Assigned(Singer)) return FALSE;
+    if (Singer's "ActiveScript" != Singer's "StartingScript") return FALSE;
+    if ($HasAttribute("BardsStreetAudience", Singer))
+        if ($ListSize(Singer's "BardsStreetAudience") > 0) return FALSE;
+    if ($HasAttribute("BardsStreetStartedAt", Singer))
+        if ($MM_SimulationElapsed(Singer's "BardsStreetStartedAt") < 60000) return FALSE;
+    if ($Bards_Show_State(Singer, 1) != 0) return FALSE;
+    Town = $Bards_Street_Town(Singer);
+    if (Town == $NullAgent()) return FALSE;
+    Enemies = $list_enemies_seen(Singer, $GetAttribute(Singer, #ATTRIB_SightRange));
+    if ($ListSize(Enemies) > 0) return FALSE;
+    if ($RandomNumber(100) >= 33) return FALSE;
+    Result = $Bards_Show_Start(Singer, Singer, Town, 1, 20000);
+    if (Result != 1) return FALSE;
+    if ($HasAttribute("BardsStreetActive", Singer) == FALSE)
+        begin
+            $AddAttribute(Singer, "BardsStreetActive", "boolean", FALSE);
+            $AddAttribute(Singer, "BardsStreetStartedAt", "integer", 0);
+            $AddAttribute(Singer, "BardsStreetPlayer", "integer", 0);
+            $AddAttribute(Singer, "BardsStreetHP", "integer", 0);
+            $AddAttribute(Singer, "BardsStreetAudience", "list");
+            $AddAttribute(Singer, "BardsStreetCount", "integer", 0);
+            $AddAttribute(Singer, "BardsStreetGold", "integer", 0);
+        end
+    // This reference has its own existence check: the former invalid "agent"
+    // type left the other fields present but this one missing in live heroes.
+    if ($HasAttribute("BardsStreetTown", Singer) == FALSE)
+        $AddAttribute(Singer, "BardsStreetTown", "agentref", Town);
+    if ($HasAttribute("BardsStreetBeat", Singer) == FALSE)
+        $AddAttribute(Singer, "BardsStreetBeat", "integer", -1);
+    Singer's "BardsStreetBeat" = -1;
+    Singer's "BardsStreetActive" = TRUE;
+    Singer's "BardsStreetStartedAt" = $MM_SimulationTime();
+    Singer's "BardsStreetTown" = Town;
+    Singer's "BardsStreetPlayer" = $GetUnitPlayerNumber(Singer);
+    Singer's "BardsStreetHP" = $GetAttribute(Singer, #ATTRIB_HP);
+    Singer's "BardsStreetCount" = 0;
+    Singer's "BardsStreetGold" = 0;
+    Singer's "Target" = Singer;
+    Singer's "ActiveScript" = $Bards_Street_Perform;
+    $SpecifyIntent(Singer, #Bards_Intent_Performing);
+    return TRUE;
+end
+
+function Bards_Street_Perform(agent Singer)
+declare
+    list Enemies;
+    integer Beat;
+begin
+    if ($Bards_Street_Active(Singer) == FALSE)
+        begin
+            $Bards_Street_End(Singer);
+            return;
+        end
+    if ((Singer's "evaluationscript")(Singer))
+        begin
+            $Bards_Street_End(Singer);
+            return;
+        end
+    if ($Check_rewards(Singer, FALSE))
+        begin
+            $Bards_Street_End(Singer);
+            return;
+        end
+    if ($Defend_home(Singer))
+        begin
+            $Bards_Street_End(Singer);
+            return;
+        end
+    Enemies = $list_enemies_seen(Singer, $GetAttribute(Singer, #ATTRIB_SightRange));
+    if (($ListSize(Enemies) > 0) || (Singer's "BardsStreetCount" >= 10))
+        begin
+            $Bards_Street_End(Singer);
+            return;
+        end
+    Singer's "BardsStreetHP" = $GetAttribute(Singer, #ATTRIB_HP);
+    // Existing AI decisions sample the existing show clock. No extra thread or
+    // timer: native action completion returns to Stand between gestures.
+    $Bards_Street_Phrase(Singer, Singer);
+    if ($HasAttribute("BardsStreetBeat", Singer) == FALSE)
+        $AddAttribute(Singer, "BardsStreetBeat", "integer", -1);
+    Beat = $MM_SimulationElapsed(Singer's "BardsStreetStartedAt") / 4000;
+    if (Beat >= 5) return;
+    if (Beat <= Singer's "BardsStreetBeat") return;
+    Singer's "BardsStreetBeat" = Beat;
+    if ((Beat == 0) || (Beat == 2))
+        begin
+            $PerformAction(Singer, "Bards_Street_Attack", Singer);
+            $CreateEffector(Singer, "Bards_Song_Flash", 0);
+        end
+    else if ((Beat == 1) || (Beat == 3))
+        // The shared Cast secondary stream already supplies its musical notes.
+        $PerformAction(Singer, "Bards_Street_Cast", Singer);
+    else $PerformAction(Singer, "Bards_Street_Play", Singer);
+end
+
+function Bards_Street_Phrase(agent Singer, agent Target)
+declare
+    list Nearby, Keep;
+    agent Listener;
+    integer Key, Result;
+begin
+    if ($Bards_Street_Active(Singer) == FALSE) return;
+    // Cancel old dwell when a listener leaves; never accumulate crossings.
+    foreach Listener in Singer's "BardsStreetAudience" do
+        if ($IsValidGamePiece(Listener))
+            if (Listener's "BardsStreetHost" == Singer)
+                begin
+                    Key = Listener's "BardsStreetKey";
+                    if ($Bards_Street_Eligible(Singer, Listener)) Keep << Listener;
+                    else
+                        begin
+                            Result = $Bards_Audience_Cancel(Listener, Key);
+                            if (Result == -3) Keep << Listener;
+                            else $Bards_Street_Release(Listener, Singer, Key);
+                        end
+                end
+    Singer's "BardsStreetAudience" = Keep;
+    $ListObjects(Singer, "Hero", 100, Nearby, #MyPlayer);
+    foreach Listener in Nearby do
+        if ((Singer's "BardsStreetCount" + $ListSize(Singer's "BardsStreetAudience")) < 10)
+            if ($Bards_Street_Eligible(Singer, Listener))
+                begin
+                    if ($HasAttribute("BardsStreetHost", Listener) == FALSE)
+                        begin
+                            $AddAttribute(Listener, "BardsStreetHost", "agentref", $NullAgent());
+                            $AddAttribute(Listener, "BardsStreetKey", "integer", 0);
+                        end
+                    if (Listener's "BardsStreetHost" == $NullAgent())
+                        begin
+                            Key = Listener's "BardsStreetKey" + 1;
+                            if (Key <= 0) Key = 1;
+                            Result = $Bards_Audience_Start(Listener, Singer, Singer's "BardsStreetTown", Key, 3000);
+                            if (Result == 1)
+                                begin
+                                    Listener's "BardsStreetHost" = Singer;
+                                    Listener's "BardsStreetKey" = Key;
+                                    Singer's "BardsStreetAudience" << Listener;
+                                end
+                        end
+                end
+end
+
+function Bards_Street_Show_Condition(agent Singer, agent Subject, agent Town, integer Key) is boolean
+declare
+begin
+    // Session ends after elapsed simulation time, even if an interruption cancels
+    // while the sampler is busy. No queries or mutations in this condition.
+    return TRUE;
+end
+
+function Bards_Street_Show_Completed(agent Singer, agent Subject, agent Town, integer Key)
+declare
+begin
+    $Bards_Street_End(Singer);
+end
+
+function Bards_Street_Show_Cancelled(agent Singer, agent Subject, agent Town, integer Key, integer Reason)
+declare
+begin
+    $Bards_Street_End(Singer);
+end
+
+function Bards_Street_Audience_Condition(agent Listener, agent Singer, agent Town, integer Key) is boolean
+declare
+begin
+    if ($Bards_Street_Active(Singer) == FALSE) return FALSE;
+    if (Singer's "BardsStreetTown" != Town) return FALSE;
+    if (Singer's "BardsStreetCount" >= 10) return FALSE;
+    if ($HasAttribute("BardsStreetHost", Listener) == FALSE) return FALSE;
+    if (Listener's "BardsStreetHost" != Singer) return FALSE;
+    if (Listener's "BardsStreetKey" != Key) return FALSE;
+    return $Bards_Street_Eligible(Singer, Listener);
+end
+
+function Bards_Street_Audience_Completed(agent Listener, agent Singer, agent Town, integer Key)
+declare
+    integer Tip;
+begin
+    if ($Bards_Street_Audience_Condition(Listener, Singer, Town, Key))
+        begin
+            Tip = 3;
+            if (Listener's "title" == "Peasant") Tip = 1;
+            if ((Singer's "BardsStreetGold" + Tip) <= 30)
+                begin
+                    // Commit identity/caps before money/XP callbacks can reenter.
+                    $Bards_Street_Release(Listener, Singer, Key);
+                    if ($HasAttribute("BardsStreetPaidAt", Listener) == FALSE)
+                        $AddAttribute(Listener, "BardsStreetPaidAt", "integer", $MM_SimulationTime());
+                    else Listener's "BardsStreetPaidAt" = $MM_SimulationTime();
+                    Singer's "BardsStreetCount" += 1;
+                    Singer's "BardsStreetGold" += Tip;
+                    if (Listener's "title" != "Peasant") $AdjustAttribute(Listener, #ATTRIB_Gold, -Tip);
+                    $Give_Gold(Singer, Tip);
+                    $Give_Exp(Singer, 5);
+                end
+        end
+    $Bards_Street_Release(Listener, Singer, Key);
+end
+
+function Bards_Street_Audience_Cancelled(agent Listener, agent Singer, agent Town, integer Key, integer Reason)
+declare
+begin
+    $Bards_Street_Release(Listener, Singer, Key);
+end

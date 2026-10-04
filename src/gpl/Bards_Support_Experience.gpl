@@ -1,0 +1,62 @@
+// Approved event-based extension. The Manager owns stock combat/exploration
+// award boundaries. No follow timer, copied leader XP total, or level-up loop.
+// Support XP reaches 360 units so active followers can catch up; songs remain 180.
+
+function Bards_Support_Experience_Eligible(agent Bard, agent Leader) is boolean
+declare
+begin
+    if ($notvalid_attacker(Bard)) return FALSE;
+    if (Bard's "title" != "Troubadour") return FALSE;
+    if (Bard == Leader) return FALSE;
+    if (Bard's "BackTarget" != Leader) return FALSE;
+    if ($GetPlayerTeamNumber(Bard) != $GetPlayerTeamNumber(Leader)) return FALSE;
+    if ($InsideBuilding(Bard)) return FALSE;
+    if ($IsFrozen(Bard)) return FALSE;
+    if ($DistanceBetweenAgents(Bard, Leader) > 360) return FALSE;
+    if ($Bards_Hall_Supporting(Bard)) return TRUE;
+    if (Bard's "BasicScript" != $Bards_Follow_Support) return FALSE;
+    if ($HasAttribute("BardsHirePatron", Bard))
+        if (Bard's "BardsHirePatron" != $NullAgent())
+            if ($Bards_Hire_Valid(Bard, Leader) == FALSE) return FALSE;
+    if (Bard's "ActiveScript" == $Bards_Follow_Support) return TRUE;
+    return ((Bard's "ActiveScript" == $Bards_Travel_Support) &&
+            (Bard's "BackScript" == $Bards_Follow_Support));
+end
+
+function Bards_CombatXP(agent Recipient, integer Base)
+declare
+begin
+    $Bards_Support_Experience(Recipient, Base);
+end
+
+function Bards_ExplorationXP(agent Recipient, integer Base)
+declare
+begin
+    $Bards_Support_Experience(Recipient, Base);
+end
+
+function Bards_Support_Experience(agent Leader, integer BaseExperience)
+declare
+    list Nearby, Hidden, Invisible, Camouflaged;
+    agent Bard, Recipient;
+begin
+    if (BaseExperience <= 0) return;
+    if ($notvalid_attacker(Leader)) return;
+    if (Leader's "subtype" != "Hero") return;
+    if (Leader's "title" == "Troubadour") return;
+    if ($InsideBuilding(Leader)) return;
+    $ListObjects(Leader, "Hero", 360, Nearby, #MyTeam, #CheckTitles, "Troubadour");
+    $ListObjects(Leader, "Hidden", 360, Hidden, #MyTeam, #CheckTitles, "Troubadour");
+    $ListObjects(Leader, "Invisible", 360, Invisible, #MyTeam, #CheckTitles, "Troubadour");
+    $ListObjects(Leader, "Camouflaged", 360, Camouflaged, #MyTeam, #CheckTitles, "Troubadour");
+    Nearby = $AddLists(Nearby, Hidden);
+    Nearby = $AddLists(Nearby, Invisible);
+    Nearby = $AddLists(Nearby, Camouflaged);
+    Recipient = $NullAgent();
+    foreach Bard in Nearby do
+        if (Recipient == $NullAgent())
+            if ($Bards_Support_Experience_Eligible(Bard, Leader)) Recipient = Bard;
+    // Even a pre-fix save with duplicate followers receives only one award.
+    // Stock give_exp applies this recipient's level divisor and Chronicles.
+    if (Recipient != $NullAgent()) $give_exp(Recipient, BaseExperience / 2);
+end

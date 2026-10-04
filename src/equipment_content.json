@@ -1,0 +1,717 @@
+{
+  "content_schema": "bards-equipment-content/v1",
+  "status": "Current equipment names, icons, upgrade tiers and hero assignments.",
+  "namespace": "e277a34f-bfb6-54ec-bfec-565d735edc37",
+  "sets": [
+    {
+      "key": "troubadour-instrument",
+      "kind": "weapon",
+      "category": "Instrument",
+      "stock_reference": "Dagger",
+      "base_stat": {
+        "attribute": "WeaponBasicDamage",
+        "value": 4
+      },
+      "quality": [
+        {
+          "rank": 0,
+          "name": "Travel Lute",
+          "structural_bonus": 0,
+          "purchase_price": 0,
+          "research": null,
+          "icon": "art/equipment-v2/native/lute-0.png",
+          "master": "art/equipment-v2/source/lute-0.png"
+        },
+        {
+          "rank": 1,
+          "name": "Fine Lute",
+          "structural_bonus": 1,
+          "purchase_price": 100,
+          "research": "ResearchWeaponLevel_2",
+          "icon": "art/equipment-v2/native/lute-1.png",
+          "master": "art/equipment-v2/source/lute-1.png"
+        },
+        {
+          "rank": 2,
+          "name": "Concert Lute",
+          "structural_bonus": 2,
+          "purchase_price": 200,
+          "research": "ResearchWeaponLevel_3",
+          "icon": "art/equipment-v2/native/lute-2.png",
+          "master": "art/equipment-v2/source/lute-2.png"
+        },
+        {
+          "rank": 3,
+          "name": "Masterwork Lute",
+          "structural_bonus": 3,
+          "purchase_price": 300,
+          "research": "ResearchWeaponLevel_4",
+          "icon": "art/equipment-v2/native/lute-3.png",
+          "master": "art/equipment-v2/source/lute-3.png"
+        }
+      ],
+      "enchantment": [
+        {
+          "rank": 0,
+          "display_suffix": "",
+          "magic_bonus": 0,
+          "purchase_price": 0,
+          "wizard_guild_level": 0,
+          "image_policy": "explicitly-reuse-current-quality-icon"
+        },
+        {
+          "rank": 1,
+          "display_suffix": " +1",
+          "magic_bonus": 1,
+          "purchase_price": 200,
+          "wizard_guild_level": 1,
+          "image_policy": "explicitly-reuse-current-quality-icon"
+        },
+        {
+          "rank": 2,
+          "display_suffix": " +2",
+          "magic_bonus": 2,
+          "purchase_price": 400,
+          "wizard_guild_level": 2,
+          "image_policy": "explicitly-reuse-current-quality-icon"
+        },
+        {
+          "rank": 3,
+          "display_suffix": " +3",
+          "magic_bonus": 3,
+          "purchase_price": 800,
+          "wizard_guild_level": 3,
+          "image_policy": "explicitly-reuse-current-quality-icon"
+        }
+      ],
+      "overflow": {
+        "structural": "Preserve native rank and numeric bonus; clamp name to last declared name, reset icon frame to 0 above rank 3, matching stock presentation.",
+        "magical": "Preserve native rank and numeric bonus; append actual +rank; reuse current-quality icon."
+      },
+      "compatible_state": {
+        "poison": "stock-WeaponPoisoned",
+        "fire_balm": "stock-HasEffectFireBalm",
+        "weapon_oil": "optional-installed-Alchemist-provider",
+        "quality_upgrade": "preserve-independent-coatings",
+        "hit_dispatch": "stock-weapon-hits; spell dispatch is separately declared"
+      },
+      "presentation_states": [
+        {
+          "quality_rank": 0,
+          "magic_rank": 0,
+          "name": "Travel Lute",
+          "structural_bonus": 0,
+          "magic_bonus": 0,
+          "icon": "art/equipment-v2/native/lute-0.png"
+        },
+        {
+          "quality_rank": 0,
+          "magic_rank": 1,
+          "name": "Travel Lute +1",
+          "structural_bonus": 0,
+          "magic_bonus": 1,
+          "icon": "art/equipment-v2/native/lute-0.png"
+        },
+        {
+          "quality_rank": 0,
+          "magic_rank": 2,
+          "name": "Travel Lute +2",
+          "structural_bonus": 0,
+          "magic_bonus": 2,
+          "icon": "art/equipment-v2/native/lute-0.png"
+        },
+        {
+          "quality_rank": 0,
+          "magic_rank": 3,
+          "name": "Travel Lute +3",
+          "structural_bonus": 0,
+          "magic_bonus": 3,
+          "icon": "art/equipment-v2/native/lute-0.png"
+        },
+        {
+          "quality_rank": 1,
+          "magic_rank": 0,
+          "name": "Fine Lute",
+          "structural_bonus": 1,
+          "magic_bonus": 0,
+          "icon": "art/equipment-v2/native/lute-1.png"
+        },
+        {
+          "quality_rank": 1,
+          "magic_rank": 1,
+          "name": "Fine Lute +1",
+          "structural_bonus": 1,
+          "magic_bonus": 1,
+          "icon": "art/equipment-v2/native/lute-1.png"
+        },
+        {
+          "quality_rank": 1,
+          "magic_rank": 2,
+          "name": "Fine Lute +2",
+          "structural_bonus": 1,
+          "magic_bonus": 2,
+          "icon": "art/equipment-v2/native/lute-1.png"
+        },
+        {
+          "quality_rank": 1,
+          "magic_rank": 3,
+          "name": "Fine Lute +3",
+          "structural_bonus": 1,
+          "magic_bonus": 3,
+          "icon": "art/equipment-v2/native/lute-1.png"
+        },
+        {
+          "quality_rank": 2,
+          "magic_rank": 0,
+          "name": "Concert Lute",
+          "structural_bonus": 2,
+          "magic_bonus": 0,
+          "icon": "art/equipment-v2/native/lute-2.png"
+        },
+        {
+          "quality_rank": 2,
+          "magic_rank": 1,
+          "name": "Concert Lute +1",
+          "structural_bonus": 2,
+          "magic_bonus": 1,
+          "icon": "art/equipment-v2/native/lute-2.png"
+        },
+        {
+          "quality_rank": 2,
+          "magic_rank": 2,
+          "name": "Concert Lute +2",
+          "structural_bonus": 2,
+          "magic_bonus": 2,
+          "icon": "art/equipment-v2/native/lute-2.png"
+        },
+        {
+          "quality_rank": 2,
+          "magic_rank": 3,
+          "name": "Concert Lute +3",
+          "structural_bonus": 2,
+          "magic_bonus": 3,
+          "icon": "art/equipment-v2/native/lute-2.png"
+        },
+        {
+          "quality_rank": 3,
+          "magic_rank": 0,
+          "name": "Masterwork Lute",
+          "structural_bonus": 3,
+          "magic_bonus": 0,
+          "icon": "art/equipment-v2/native/lute-3.png"
+        },
+        {
+          "quality_rank": 3,
+          "magic_rank": 1,
+          "name": "Masterwork Lute +1",
+          "structural_bonus": 3,
+          "magic_bonus": 1,
+          "icon": "art/equipment-v2/native/lute-3.png"
+        },
+        {
+          "quality_rank": 3,
+          "magic_rank": 2,
+          "name": "Masterwork Lute +2",
+          "structural_bonus": 3,
+          "magic_bonus": 2,
+          "icon": "art/equipment-v2/native/lute-3.png"
+        },
+        {
+          "quality_rank": 3,
+          "magic_rank": 3,
+          "name": "Masterwork Lute +3",
+          "structural_bonus": 3,
+          "magic_bonus": 3,
+          "icon": "art/equipment-v2/native/lute-3.png"
+        }
+      ],
+      "display_name": "Lute",
+      "description": "Troubadour instrument. Weapon upgrades and enchanting improve his occasional direct defensive attack; song values remain defined by the song abilities."
+    },
+    {
+      "key": "spellsinger-instrument",
+      "kind": "weapon",
+      "category": "Instrument",
+      "stock_reference": "Staff",
+      "base_stat": {
+        "attribute": "WeaponBasicDamage",
+        "value": 4
+      },
+      "quality": [
+        {
+          "rank": 0,
+          "name": "Resonance Fork",
+          "structural_bonus": 0,
+          "purchase_price": 0,
+          "research": null,
+          "icon": "art/equipment-v2/native/focus-0.png",
+          "master": "art/equipment-v2/source/focus-0.png"
+        },
+        {
+          "rank": 1,
+          "name": "Silver Resonator",
+          "structural_bonus": 1,
+          "purchase_price": 100,
+          "research": "ResearchWeaponLevel_2",
+          "icon": "art/equipment-v2/native/focus-1.png",
+          "master": "art/equipment-v2/source/focus-1.png"
+        },
+        {
+          "rank": 2,
+          "name": "Crystal Resonator",
+          "structural_bonus": 2,
+          "purchase_price": 200,
+          "research": "ResearchWeaponLevel_3",
+          "icon": "art/equipment-v2/native/focus-2.png",
+          "master": "art/equipment-v2/source/focus-2.png"
+        },
+        {
+          "rank": 3,
+          "name": "Harmonic Conductor",
+          "structural_bonus": 3,
+          "purchase_price": 300,
+          "research": "ResearchWeaponLevel_4",
+          "icon": "art/equipment-v2/native/focus-3.png",
+          "master": "art/equipment-v2/source/focus-3.png"
+        }
+      ],
+      "enchantment": [
+        {
+          "rank": 0,
+          "display_suffix": "",
+          "magic_bonus": 0,
+          "purchase_price": 0,
+          "wizard_guild_level": 0,
+          "image_policy": "explicitly-reuse-current-quality-icon"
+        },
+        {
+          "rank": 1,
+          "display_suffix": " +1",
+          "magic_bonus": 1,
+          "purchase_price": 200,
+          "wizard_guild_level": 1,
+          "image_policy": "explicitly-reuse-current-quality-icon"
+        },
+        {
+          "rank": 2,
+          "display_suffix": " +2",
+          "magic_bonus": 2,
+          "purchase_price": 400,
+          "wizard_guild_level": 2,
+          "image_policy": "explicitly-reuse-current-quality-icon"
+        },
+        {
+          "rank": 3,
+          "display_suffix": " +3",
+          "magic_bonus": 3,
+          "purchase_price": 800,
+          "wizard_guild_level": 3,
+          "image_policy": "explicitly-reuse-current-quality-icon"
+        }
+      ],
+      "overflow": {
+        "structural": "Preserve native rank and numeric bonus; clamp name to last declared name, reset icon frame to 0 above rank 3, matching stock presentation.",
+        "magical": "Preserve native rank and numeric bonus; append actual +rank; reuse current-quality icon."
+      },
+      "compatible_state": {
+        "poison": "excluded: magical attacks do not use weapon poison",
+        "fire_balm": "excluded by stock Bazaar caster eligibility",
+        "weapon_oil": "excluded by Bards_Hero_Capability weapon_oil policy, consumed by updated Alchemist package",
+        "quality_upgrade": "stock quality and magical upgrades only",
+        "hit_dispatch": "Arcane Note spell damage; no coating dispatch"
+      },
+      "presentation_states": [
+        {
+          "quality_rank": 0,
+          "magic_rank": 0,
+          "name": "Resonance Fork",
+          "structural_bonus": 0,
+          "magic_bonus": 0,
+          "icon": "art/equipment-v2/native/focus-0.png"
+        },
+        {
+          "quality_rank": 0,
+          "magic_rank": 1,
+          "name": "Resonance Fork +1",
+          "structural_bonus": 0,
+          "magic_bonus": 1,
+          "icon": "art/equipment-v2/native/focus-0.png"
+        },
+        {
+          "quality_rank": 0,
+          "magic_rank": 2,
+          "name": "Resonance Fork +2",
+          "structural_bonus": 0,
+          "magic_bonus": 2,
+          "icon": "art/equipment-v2/native/focus-0.png"
+        },
+        {
+          "quality_rank": 0,
+          "magic_rank": 3,
+          "name": "Resonance Fork +3",
+          "structural_bonus": 0,
+          "magic_bonus": 3,
+          "icon": "art/equipment-v2/native/focus-0.png"
+        },
+        {
+          "quality_rank": 1,
+          "magic_rank": 0,
+          "name": "Silver Resonator",
+          "structural_bonus": 1,
+          "magic_bonus": 0,
+          "icon": "art/equipment-v2/native/focus-1.png"
+        },
+        {
+          "quality_rank": 1,
+          "magic_rank": 1,
+          "name": "Silver Resonator +1",
+          "structural_bonus": 1,
+          "magic_bonus": 1,
+          "icon": "art/equipment-v2/native/focus-1.png"
+        },
+        {
+          "quality_rank": 1,
+          "magic_rank": 2,
+          "name": "Silver Resonator +2",
+          "structural_bonus": 1,
+          "magic_bonus": 2,
+          "icon": "art/equipment-v2/native/focus-1.png"
+        },
+        {
+          "quality_rank": 1,
+          "magic_rank": 3,
+          "name": "Silver Resonator +3",
+          "structural_bonus": 1,
+          "magic_bonus": 3,
+          "icon": "art/equipment-v2/native/focus-1.png"
+        },
+        {
+          "quality_rank": 2,
+          "magic_rank": 0,
+          "name": "Crystal Resonator",
+          "structural_bonus": 2,
+          "magic_bonus": 0,
+          "icon": "art/equipment-v2/native/focus-2.png"
+        },
+        {
+          "quality_rank": 2,
+          "magic_rank": 1,
+          "name": "Crystal Resonator +1",
+          "structural_bonus": 2,
+          "magic_bonus": 1,
+          "icon": "art/equipment-v2/native/focus-2.png"
+        },
+        {
+          "quality_rank": 2,
+          "magic_rank": 2,
+          "name": "Crystal Resonator +2",
+          "structural_bonus": 2,
+          "magic_bonus": 2,
+          "icon": "art/equipment-v2/native/focus-2.png"
+        },
+        {
+          "quality_rank": 2,
+          "magic_rank": 3,
+          "name": "Crystal Resonator +3",
+          "structural_bonus": 2,
+          "magic_bonus": 3,
+          "icon": "art/equipment-v2/native/focus-2.png"
+        },
+        {
+          "quality_rank": 3,
+          "magic_rank": 0,
+          "name": "Harmonic Conductor",
+          "structural_bonus": 3,
+          "magic_bonus": 0,
+          "icon": "art/equipment-v2/native/focus-3.png"
+        },
+        {
+          "quality_rank": 3,
+          "magic_rank": 1,
+          "name": "Harmonic Conductor +1",
+          "structural_bonus": 3,
+          "magic_bonus": 1,
+          "icon": "art/equipment-v2/native/focus-3.png"
+        },
+        {
+          "quality_rank": 3,
+          "magic_rank": 2,
+          "name": "Harmonic Conductor +2",
+          "structural_bonus": 3,
+          "magic_bonus": 2,
+          "icon": "art/equipment-v2/native/focus-3.png"
+        },
+        {
+          "quality_rank": 3,
+          "magic_rank": 3,
+          "name": "Harmonic Conductor +3",
+          "structural_bonus": 3,
+          "magic_bonus": 3,
+          "icon": "art/equipment-v2/native/focus-3.png"
+        }
+      ],
+      "display_name": "Resonance Focus",
+      "description": "Spellsinger instrument. Structural and magical weapon bonuses improve the primary Arcane Note hit once. Echo and area damage retain their existing values."
+    },
+    {
+      "key": "blade-dancer-dual-wield",
+      "kind": "weapon",
+      "category": "Dual Wield",
+      "stock_reference": "Longsword",
+      "base_stat": {
+        "attribute": "WeaponBasicDamage",
+        "value": 12
+      },
+      "quality": [
+        {
+          "rank": 0,
+          "name": "Saber & Dagger",
+          "structural_bonus": 0,
+          "purchase_price": 0,
+          "research": null,
+          "icon": "art/equipment-v2/native/dual-wield-0.png",
+          "master": "art/equipment-v2/source/dual-wield-0.png"
+        },
+        {
+          "rank": 1,
+          "name": "Balanced Blades",
+          "structural_bonus": 1,
+          "purchase_price": 100,
+          "research": "ResearchWeaponLevel_2",
+          "icon": "art/equipment-v2/native/dual-wield-1.png",
+          "master": "art/equipment-v2/source/dual-wield-1.png"
+        },
+        {
+          "rank": 2,
+          "name": "Duelist's Pair",
+          "structural_bonus": 2,
+          "purchase_price": 200,
+          "research": "ResearchWeaponLevel_3",
+          "icon": "art/equipment-v2/native/dual-wield-2.png",
+          "master": "art/equipment-v2/source/dual-wield-2.png"
+        },
+        {
+          "rank": 3,
+          "name": "Masterwork Blades",
+          "structural_bonus": 3,
+          "purchase_price": 300,
+          "research": "ResearchWeaponLevel_4",
+          "icon": "art/equipment-v2/native/dual-wield-3.png",
+          "master": "art/equipment-v2/source/dual-wield-3.png"
+        }
+      ],
+      "enchantment": [
+        {
+          "rank": 0,
+          "display_suffix": "",
+          "magic_bonus": 0,
+          "purchase_price": 0,
+          "wizard_guild_level": 0,
+          "image_policy": "explicitly-reuse-current-quality-icon"
+        },
+        {
+          "rank": 1,
+          "display_suffix": " +1",
+          "magic_bonus": 1,
+          "purchase_price": 200,
+          "wizard_guild_level": 1,
+          "image_policy": "explicitly-reuse-current-quality-icon"
+        },
+        {
+          "rank": 2,
+          "display_suffix": " +2",
+          "magic_bonus": 2,
+          "purchase_price": 400,
+          "wizard_guild_level": 2,
+          "image_policy": "explicitly-reuse-current-quality-icon"
+        },
+        {
+          "rank": 3,
+          "display_suffix": " +3",
+          "magic_bonus": 3,
+          "purchase_price": 800,
+          "wizard_guild_level": 3,
+          "image_policy": "explicitly-reuse-current-quality-icon"
+        }
+      ],
+      "overflow": {
+        "structural": "Preserve native rank and numeric bonus; clamp name to last declared name, reset icon frame to 0 above rank 3, matching stock presentation.",
+        "magical": "Preserve native rank and numeric bonus; append actual +rank; reuse current-quality icon."
+      },
+      "compatible_state": {
+        "poison": "stock-WeaponPoisoned",
+        "fire_balm": "stock-HasEffectFireBalm",
+        "weapon_oil": "optional-installed-Alchemist-provider",
+        "quality_upgrade": "preserve-independent-coatings",
+        "hit_dispatch": "stock-weapon-hits; spell dispatch is separately declared"
+      },
+      "presentation_states": [
+        {
+          "quality_rank": 0,
+          "magic_rank": 0,
+          "name": "Saber & Dagger",
+          "structural_bonus": 0,
+          "magic_bonus": 0,
+          "icon": "art/equipment-v2/native/dual-wield-0.png"
+        },
+        {
+          "quality_rank": 0,
+          "magic_rank": 1,
+          "name": "Saber & Dagger +1",
+          "structural_bonus": 0,
+          "magic_bonus": 1,
+          "icon": "art/equipment-v2/native/dual-wield-0.png"
+        },
+        {
+          "quality_rank": 0,
+          "magic_rank": 2,
+          "name": "Saber & Dagger +2",
+          "structural_bonus": 0,
+          "magic_bonus": 2,
+          "icon": "art/equipment-v2/native/dual-wield-0.png"
+        },
+        {
+          "quality_rank": 0,
+          "magic_rank": 3,
+          "name": "Saber & Dagger +3",
+          "structural_bonus": 0,
+          "magic_bonus": 3,
+          "icon": "art/equipment-v2/native/dual-wield-0.png"
+        },
+        {
+          "quality_rank": 1,
+          "magic_rank": 0,
+          "name": "Balanced Blades",
+          "structural_bonus": 1,
+          "magic_bonus": 0,
+          "icon": "art/equipment-v2/native/dual-wield-1.png"
+        },
+        {
+          "quality_rank": 1,
+          "magic_rank": 1,
+          "name": "Balanced Blades +1",
+          "structural_bonus": 1,
+          "magic_bonus": 1,
+          "icon": "art/equipment-v2/native/dual-wield-1.png"
+        },
+        {
+          "quality_rank": 1,
+          "magic_rank": 2,
+          "name": "Balanced Blades +2",
+          "structural_bonus": 1,
+          "magic_bonus": 2,
+          "icon": "art/equipment-v2/native/dual-wield-1.png"
+        },
+        {
+          "quality_rank": 1,
+          "magic_rank": 3,
+          "name": "Balanced Blades +3",
+          "structural_bonus": 1,
+          "magic_bonus": 3,
+          "icon": "art/equipment-v2/native/dual-wield-1.png"
+        },
+        {
+          "quality_rank": 2,
+          "magic_rank": 0,
+          "name": "Duelist's Pair",
+          "structural_bonus": 2,
+          "magic_bonus": 0,
+          "icon": "art/equipment-v2/native/dual-wield-2.png"
+        },
+        {
+          "quality_rank": 2,
+          "magic_rank": 1,
+          "name": "Duelist's Pair +1",
+          "structural_bonus": 2,
+          "magic_bonus": 1,
+          "icon": "art/equipment-v2/native/dual-wield-2.png"
+        },
+        {
+          "quality_rank": 2,
+          "magic_rank": 2,
+          "name": "Duelist's Pair +2",
+          "structural_bonus": 2,
+          "magic_bonus": 2,
+          "icon": "art/equipment-v2/native/dual-wield-2.png"
+        },
+        {
+          "quality_rank": 2,
+          "magic_rank": 3,
+          "name": "Duelist's Pair +3",
+          "structural_bonus": 2,
+          "magic_bonus": 3,
+          "icon": "art/equipment-v2/native/dual-wield-2.png"
+        },
+        {
+          "quality_rank": 3,
+          "magic_rank": 0,
+          "name": "Masterwork Blades",
+          "structural_bonus": 3,
+          "magic_bonus": 0,
+          "icon": "art/equipment-v2/native/dual-wield-3.png"
+        },
+        {
+          "quality_rank": 3,
+          "magic_rank": 1,
+          "name": "Masterwork Blades +1",
+          "structural_bonus": 3,
+          "magic_bonus": 1,
+          "icon": "art/equipment-v2/native/dual-wield-3.png"
+        },
+        {
+          "quality_rank": 3,
+          "magic_rank": 2,
+          "name": "Masterwork Blades +2",
+          "structural_bonus": 3,
+          "magic_bonus": 2,
+          "icon": "art/equipment-v2/native/dual-wield-3.png"
+        },
+        {
+          "quality_rank": 3,
+          "magic_rank": 3,
+          "name": "Masterwork Blades +3",
+          "structural_bonus": 3,
+          "magic_bonus": 3,
+          "icon": "art/equipment-v2/native/dual-wield-3.png"
+        }
+      ],
+      "display_name": "Saber and Dagger",
+      "description": "A saber and dagger: one attack combines the saber damage roll with a separate 1-8 dagger roll. Strength, upgrades, enchanting and hit effects apply once."
+    }
+  ],
+  "hero_assignments": [
+    {
+      "hero_id": "BDT1",
+      "weapon": "troubadour-instrument",
+      "armor": null,
+      "quality_rank": 0,
+      "magic_rank": 0,
+      "stock_armor": "Leather"
+    },
+    {
+      "hero_id": "BDS1",
+      "weapon": "spellsinger-instrument",
+      "armor": null,
+      "quality_rank": 0,
+      "magic_rank": 0,
+      "stock_armor": null
+    },
+    {
+      "hero_id": "BDD1",
+      "weapon": "blade-dancer-dual-wield",
+      "armor": null,
+      "quality_rank": 0,
+      "magic_rank": 0,
+      "stock_armor": "Leather"
+    }
+  ],
+  "spellsinger_trial": {
+    "spell": "Bards_Arcane_Note",
+    "weapon_upgrade_damage": "Add structural and magical weapon bonuses once after the existing damage/Intelligence roll, before defender mitigation.",
+    "weapon_base_damage": "Keep existing Arcane Note base damage; do not add physical weapon base damage.",
+    "echo_and_area": "No additional equipment scaling or coating dispatch for Reverberation or Resonant Burst.",
+    "coatings": "Excluded by design. No poison, Fire Balm or weapon oils; quality upgrades and Wizard enchanting remain available.",
+    "shopping_preference": 85,
+    "assumption": "Arcane Note-only scaling is the stated first-trial recommendation; user gave general implementation authorization without a different selection."
+  }
+}

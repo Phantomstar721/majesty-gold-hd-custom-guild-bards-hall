@@ -1,0 +1,123 @@
+// Private reaction/chain state is sampled only at stock attack resolution.
+// The native simulation clock supplies elapsed time; there is no timer thread.
+
+// Standard weapon action callback: presentation, then the unchanged resolver.
+// No replacement action, extra hit, or delay inside the damage callback.
+function Bards_Flourish_Attack(agent Dancer, agent Target)
+declare
+begin
+    if ($notvalid_attacker(Dancer) == FALSE)
+        $CreateEffector(Dancer, "Bards_Flourish_Flash", 0);
+    $make_attack(Dancer, Target);
+end
+
+function Bards_Dancer_Level(agent Hero, integer Level) is boolean
+declare
+begin
+    if ($notvalid_attacker(Hero)) return FALSE;
+    if (Hero's "title" != "Blade_Dancer") return FALSE;
+    return ($GetAttribute(Hero, #ATTRIB_ExperienceLevel) >= Level);
+end
+
+function Bards_Flourish_Reset(agent Dancer)
+declare
+begin
+    if ($HasAttribute("BardsDuelTarget", Dancer)) Dancer's "BardsDuelTarget" = $NullAgent();
+    if ($HasAttribute("BardsDuelHits", Dancer)) Dancer's "BardsDuelHits" = 0;
+end
+
+// Called at the stock normal-weapon dispatch, after target/range checks.
+// Selection never consumes Encore or advances the successful-hit chain.
+function Bards_Weapon_Action(agent Dancer, agent Target) is string
+declare
+begin
+    if ($Bards_Dancer_Level(Dancer, 8))
+        if ($notvalid(Target) == FALSE)
+            if ($Bards_Hostile_Target(Dancer, Target))
+                if ((Target's "type" == "Monster") || (Target's "subtype" == "Hero"))
+                    if ($HasAttribute("BardsDuelTarget", Dancer))
+                        if (Dancer's "BardsDuelTarget" == Target)
+                            if (Dancer's "BardsDuelHits" >= 2) return "Bards_Flourish_Strike";
+    return Dancer's "Attack_Action";
+end
+
+// Stock GetBestSpell validation is shared by stock and foreign combat trees.
+// Cast presentation must not give a melee strike the hero's casting range.
+function Bards_Flourish_Check(agent Dancer) is integer
+declare
+    agent Target;
+begin
+    Target = Dancer's "Target";
+    if ($Bards_Weapon_Action(Dancer, Target) != "Bards_Flourish_Strike") return 0;
+    if ($DistanceBetweenAgents(Dancer, Target) > $GetAttribute(Dancer, #ATTRIB_MaxAttackRange)) return 0;
+    return 1;
+end
+
+function Bards_Flourish_Target(agent Dancer, agent Target)
+declare
+begin
+    if ($Bards_Dancer_Level(Dancer, 8) == FALSE) return;
+    $Bards_Finale_Attempt(Dancer, Target);
+    // Observe even an ordinary miss against a new enemy; switching away and
+    // back cannot preserve an old two-hit chain.
+    if ($HasAttribute("BardsDuelTarget", Dancer))
+        if (Dancer's "BardsDuelTarget" != Target) $Bards_Flourish_Reset(Dancer);
+end
+
+function Bards_Flourish_Hit(agent Dancer, agent Target) is boolean
+declare
+begin
+    if ($Bards_Dancer_Level(Dancer, 8) == FALSE) return FALSE;
+    if ($Bards_Hostile_Target(Dancer, Target) == FALSE) return FALSE;
+    if ((Target's "subtype" != "Hero") && (Target's "type" != "Monster")) return FALSE;
+    if ($HasAttribute("BardsDuelTarget", Dancer) == FALSE)
+        begin
+            $AddAttribute(Dancer, "BardsDuelTarget", "agentref", $NullAgent());
+            $AddAttribute(Dancer, "BardsDuelHits", "integer", 0);
+        end
+    if (Dancer's "BardsDuelTarget" != Target) Dancer's "BardsDuelHits" = 0;
+    Dancer's "BardsDuelTarget" = Target;
+    Dancer's "BardsDuelHits" += 1;
+    if (Dancer's "BardsDuelHits" < 3) return FALSE;
+    $Bards_Finale_Arm(Dancer, Target);
+    return TRUE;
+end
+
+// Consume before damage callbacks can reenter combat. All weapon hits then
+// use the composed stock damage function, including another mod's coatings.
+function Bards_Consume_Flourish(agent Dancer, agent Target) is boolean
+declare
+begin
+    if ($Bards_Dancer_Level(Dancer, 8) == FALSE) return FALSE;
+    if ($HasAttribute("BardsDuelTarget", Dancer) == FALSE) return FALSE;
+    if (Dancer's "BardsDuelTarget" != Target) return FALSE;
+    if (Dancer's "BardsDuelHits" != 3) return FALSE;
+    Dancer's "BardsDuelHits" = 0;
+    return TRUE;
+end
+
+function Bards_Ordinary_Damage(agent Attacker, agent Defender)
+declare
+begin
+    $Bards_Flourish_Hit(Attacker, Defender);
+    $damage(Attacker, Defender);
+end
+
+function Bards_Try_Riposte(agent Dancer, agent Enemy)
+declare
+begin
+    if ($Bards_Dancer_Level(Dancer, 3) == FALSE) return;
+    if ($notvalid(Enemy)) return;
+    if (Enemy's "attacktype" != 1) return;
+    if ($Bards_Hostile_Target(Dancer, Enemy) == FALSE) return;
+    if ($IsFrozen(Dancer)) return;
+    if ($HasAttribute("BardsRipostedAt", Dancer))
+        if ($MM_SimulationElapsed(Dancer's "BardsRipostedAt") < 4000) return;
+    if ($HasAttribute("BardsRipostedAt", Dancer) == FALSE)
+        $AddAttribute(Dancer, "BardsRipostedAt", "integer", $MM_SimulationTime());
+    else Dancer's "BardsRipostedAt" = $MM_SimulationTime();
+    $CreateEffector(Dancer, "Bards_Riposte_Flash", 0);
+    // A single stock normal hit resolution, after the original attack ends.
+    // This private resolver has no reaction or finisher dispatch of its own.
+    $Bards_Riposte_Attack(Dancer, Enemy);
+end

@@ -1,0 +1,19 @@
+CUSTOM GUILD: BARDS HALL - REQUIRED LAUNCHER
+==========================================
+
+This mod requires Majesty Mod Manager:
+https://steamcommunity.com/sharedfiles/filedetails/?id=3793024054
+
+1. Subscribe to Custom Guild: Bards Hall and Majesty Mod Manager.
+2. Open the Manager's Workshop folder and run Majesty Mod Manager.exe.
+3. Select Custom Guild: Bards Hall, together with your other compatible mods.
+4. Choose Prepare Selected Mods.
+5. Use Launch Majesty inside the Manager.
+
+The Manager supplies the custom recruitment panel, equipment, hiring,
+Epic Chronicles and shared spell systems. Enabling the raw package through
+Majesty's ordinary mod selector does not provide those features.
+
+The package includes game resources and the GPL inputs required by the
+Manager to prepare compatible profiles. No external installation of the
+Majesty SDK or GPL compiler is required by players.

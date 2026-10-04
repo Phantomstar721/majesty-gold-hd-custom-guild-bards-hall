@@ -1,0 +1,36 @@
+// Event-local defensive reaction. Native projectiles/tasks own scheduling.
+// The saved timestamp is shared by ordinary missiles and direct damage spells.
+
+function Bards_Deflect_Ready(agent Dancer) is boolean
+declare
+begin
+    if ($Bards_Dancer_Level(Dancer, 5) == FALSE) return FALSE;
+    if (Dancer's "subtype" != "Hero") return FALSE;
+    if ($IsFrozen(Dancer)) return FALSE;
+    if ($HasAttribute("BardsDeflectedAt", Dancer))
+        if ($MM_SimulationElapsed(Dancer's "BardsDeflectedAt") < 8000) return FALSE;
+    return TRUE;
+end
+
+function Bards_Deflect_Commit(agent Dancer)
+declare
+begin
+    if ($HasAttribute("BardsDeflectedAt", Dancer) == FALSE)
+        $AddAttribute(Dancer, "BardsDeflectedAt", "integer", $MM_SimulationTime());
+    else Dancer's "BardsDeflectedAt" = $MM_SimulationTime();
+    $CreateEffector(Dancer, "Bards_Deflect_Flash", 0);
+end
+
+function Bards_Deflect_Physical(agent Attacker, agent Dancer) is boolean
+declare
+begin
+    if ($Bards_Deflect_Ready(Dancer) == FALSE) return FALSE;
+    if ((Attacker's "attacktype" != 2) && (Attacker's "attacktype" != 5)) return FALSE;
+    if ($HasAttribute("Attack_Action", Attacker))
+        begin
+            if (Attacker's "Attack_Action" == "Ballista_Bolt") return FALSE;
+            if (Attacker's "Attack_Action" == "Ratapult_Ball") return FALSE;
+        end
+    $Bards_Deflect_Commit(Dancer);
+    return TRUE;
+end

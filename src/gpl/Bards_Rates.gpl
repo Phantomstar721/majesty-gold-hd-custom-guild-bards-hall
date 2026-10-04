@@ -1,0 +1,150 @@
+// Winged Feet/Wither modifier ownership. March movement uses the approved
+// BME2 native distance scale; action and Satire periods retain stored deltas.
+// Primary-action targets are approximate, not uniform multipliers on every
+// action. Invalid/zero action bases never get guessed replacements.
+
+function Bards_Primary_Action(agent Hero) is string
+declare
+    string Action;
+begin
+    if (Hero's "title" == "Wizard") return "energy_blast";
+    if (Hero's "title" == "Healer") return "healer_heal";
+    if (Hero's "title" == "Spellsinger") return "Bards_Arcane_Note";
+    if (Hero's "title" == "Troubadour") return "Bards_Valor";
+    Action = Hero's "Attack_Action";
+    if (Action == "do_nothing") Action = Hero's "Cast_Action";
+    return Action;
+end
+
+function Bards_March_Useful(agent Hero) is boolean
+declare
+begin
+    // Follow support may prepare the party for its next movement step;
+    // usefulness must not depend on catching a moving target between ticks.
+    if ($MM_UnitMovementBasePeriod(Hero) > 0) return TRUE;
+    if ($Bards_Hero_Engaged(Hero))
+        if ($MM_ActionBasePeriod($Bards_Primary_Action(Hero)) > 0) return TRUE;
+    return FALSE;
+end
+
+function Bards_Rate_Delta(integer BasePeriod, integer Percent, integer Divisor) is integer
+declare
+    float Period;
+begin
+    if (BasePeriod <= 0) return 0;
+    // Float intermediate avoids overflowing a valid large native signed period.
+    Period = BasePeriod;
+    return (Period * Percent) / Divisor;
+end
+
+function Bards_March_Apply(agent Caster, agent Recipient)
+declare
+    boolean Existing;
+    integer ActionBase, ActionDelta;
+begin
+    if ($CheckEffector(Recipient, "Bards_March_Legacy_Icon")) return;
+    Existing = $CheckEffector(Recipient, "Bards_March_Icon");
+    if (Existing == FALSE)
+        begin
+            ActionBase = $MM_ActionBasePeriod($Bards_Primary_Action(Recipient));
+            ActionDelta = 0;
+            // BME2 owns native movement scaling. Only the stock primary-action
+            // period modifier remains here; raw movement deltas can round away.
+            ActionDelta = $Bards_Rate_Delta(ActionBase, 10, 110);
+            if ($HasAttribute("BardsMarchMoveDelta", Recipient) == FALSE)
+                begin
+                    $AddAttribute(Recipient, "BardsMarchMoveDelta", "integer", 0);
+                    $AddAttribute(Recipient, "BardsMarchActionDelta", "integer", 0);
+                end
+            Recipient's "BardsMarchMoveDelta" = 0;
+            Recipient's "BardsMarchActionDelta" = ActionDelta;
+        end
+    $CreateEffector(Recipient, "Bards_March_Icon", 8000);
+    $CreateEffector(Recipient, "Bards_March_Flash", 0);
+    if (Existing == FALSE)
+        begin
+            $AdjustAttribute(Recipient, #ATTRIB_ActionRateModifier, -ActionDelta);
+        end
+    if ($HasAttribute("BardsMarchSource", Recipient) == FALSE)
+        $AddAttribute(Recipient, "BardsMarchSource", "agentref", Caster);
+    else Recipient's "BardsMarchSource" = Caster;
+end
+
+function Bards_March_End(agent Recipient)
+declare
+begin
+    $AdjustAttribute(Recipient, #ATTRIB_MovementRateModifier, Recipient's "BardsMarchMoveDelta");
+    $AdjustAttribute(Recipient, #ATTRIB_ActionRateModifier, Recipient's "BardsMarchActionDelta");
+    Recipient's "BardsMarchMoveDelta" = 0;
+    Recipient's "BardsMarchActionDelta" = 0;
+    if ($HasAttribute("BardsMarchSource", Recipient)) Recipient's "BardsMarchSource" = $NullAgent();
+end
+
+function Bards_Satire_Apply(agent Caster, agent Recipient)
+declare
+    boolean Existing;
+    integer MoveBase, ActionBase, MoveDelta, ActionDelta;
+    integer StrengthDelta, OldStrength;
+begin
+    Existing = $CheckEffector(Recipient, "Bards_Satire_Icon");
+    StrengthDelta = 5 + ($Bards_Song_Intelligence_Step(Caster) / 2);
+    OldStrength = 0;
+    if (Existing)
+        begin
+            OldStrength = 5;
+            if ($HasAttribute("BardsSatireStrength", Recipient))
+                OldStrength = Recipient's "BardsSatireStrength";
+        end
+    if ($HasAttribute("BardsSatireStrength", Recipient) == FALSE)
+        $AddAttribute(Recipient, "BardsSatireStrength", "integer", 0);
+    if (Existing == FALSE)
+        begin
+            MoveBase = $MM_UnitMovementBasePeriod(Recipient);
+            ActionBase = $MM_ActionBasePeriod($Bards_Primary_Action(Recipient));
+            MoveDelta = 0;
+            ActionDelta = 0;
+            // -15% speed -> period * 100/85. Store once, including zero deltas
+            // for any unsupported component. Strength scales independently.
+            MoveDelta = $Bards_Rate_Delta(MoveBase, 15, 85);
+            ActionDelta = $Bards_Rate_Delta(ActionBase, 15, 85);
+            if ($HasAttribute("BardsSatireMoveDelta", Recipient) == FALSE)
+                begin
+                    $AddAttribute(Recipient, "BardsSatireMoveDelta", "integer", 0);
+                    $AddAttribute(Recipient, "BardsSatireActionDelta", "integer", 0);
+                end
+            Recipient's "BardsSatireMoveDelta" = MoveDelta;
+            Recipient's "BardsSatireActionDelta" = ActionDelta;
+        end
+    // Weaker casts cannot refresh the stronger effect's lifetime.
+    if (StrengthDelta < OldStrength) return;
+    $CreateEffector(Recipient, "Bards_Satire_Icon", 6000);
+    $CreateEffector(Recipient, "Bards_Satire_Flash", 0);
+    $MagicalAdjustAttribute(Recipient, #ATTRIB_Strength, OldStrength - StrengthDelta);
+    Recipient's "BardsSatireStrength" = StrengthDelta;
+    if (Existing == FALSE)
+        begin
+            $AdjustAttribute(Recipient, #ATTRIB_MovementRateModifier, MoveDelta);
+            $AdjustAttribute(Recipient, #ATTRIB_ActionRateModifier, ActionDelta);
+        end
+    if ($HasAttribute("BardsSatireSource", Recipient) == FALSE)
+        $AddAttribute(Recipient, "BardsSatireSource", "agentref", Caster);
+    else Recipient's "BardsSatireSource" = Caster;
+end
+
+function Bards_Satire_End(agent Recipient)
+declare
+    integer StrengthDelta;
+begin
+    StrengthDelta = 5;
+    if ($HasAttribute("BardsSatireStrength", Recipient))
+        begin
+            StrengthDelta = Recipient's "BardsSatireStrength";
+            Recipient's "BardsSatireStrength" = 0;
+        end
+    $MagicalAdjustAttribute(Recipient, #ATTRIB_Strength, StrengthDelta);
+    $AdjustAttribute(Recipient, #ATTRIB_MovementRateModifier, -Recipient's "BardsSatireMoveDelta");
+    $AdjustAttribute(Recipient, #ATTRIB_ActionRateModifier, -Recipient's "BardsSatireActionDelta");
+    Recipient's "BardsSatireMoveDelta" = 0;
+    Recipient's "BardsSatireActionDelta" = 0;
+    if ($HasAttribute("BardsSatireSource", Recipient)) Recipient's "BardsSatireSource" = $NullAgent();
+end

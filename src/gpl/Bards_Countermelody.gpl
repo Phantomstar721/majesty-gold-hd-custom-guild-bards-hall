@@ -1,0 +1,22 @@
+// Non-damaging curse: stock spellhit owns resistance; native effector owns expiry.
+function Bards_Countermelody_Target(agent Caster, agent Target) is boolean
+declare
+begin
+    if ($notvalid_attacker(Caster)) return FALSE;
+    if ($notvalid(Target)) return FALSE;
+    if ($Bards_Hostile_Target(Caster, Target) == FALSE) return FALSE;
+    if ((Target's "type" != "Monster") && (Target's "subtype" != "Hero")) return FALSE;
+    if ($CheckEffector(Target, "Bards_Countermelody_Icon")) return FALSE;
+    if ($GetAttribute(Target, #ATTRIB_HasEffectMagicMirror) == 1) return FALSE;
+    if ($GetAttribute(Target, #ATTRIB_MagicResistance) >= 100) return FALSE;
+    if ($GetAttribute(Target, #ATTRIB_HP) <= 5) return FALSE;
+    return TRUE;
+end
+
+function Bards_Countermelody_Check(agent ThisAgent) is integer
+declare
+begin
+    if ($CheckEffector(ThisAgent, "Bards_Countermelody_Icon")) return 0;
+    if ($Bards_Countermelody_Target(ThisAgent, ThisAgent's "Target")) return 1;
+    return 0;
+end

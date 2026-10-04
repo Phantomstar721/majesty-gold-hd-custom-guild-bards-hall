@@ -1,0 +1,18 @@
+// Optional stock-style function attribute. Declares existing behavior only.
+// No quest IDs, foreign class defaults, task changes or support ownership.
+function Bards_Hero_Capability(agent Hero, string Capability) is boolean
+declare
+	string Title;
+begin
+	Title = Hero's "title";
+	if ((Title != "Troubadour") && (Title != "Spellsinger") && (Title != "Blade_Dancer"))
+		return False;
+	if (Capability == "combat")
+		return ((Title == "Spellsinger") || (Title == "Blade_Dancer"));
+	if (Capability == "weapon_oil")
+		return (Title != "Spellsinger");
+	return ((Capability == "bazaar_purchase") || (Capability == "potion_healing") ||
+		(Capability == "potion_speed") || (Capability == "potion_strength") ||
+		(Capability == "potion_invisibility") || (Capability == "potion_regeneration") ||
+		(Capability == "potion_shapechange"));
+end

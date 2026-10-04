@@ -1,0 +1,162 @@
+// Resonant Burst uses stock Solarus validation/action completion and spell-hit
+// resolution, with Ratapult's caster-owned coordinate-centred recipient query.
+// Balance defaults not fixed in the design: radius 70, 12-second native timeout,
+// level 8, and stock Solarus damage 15 + hero level. No fire resistance branch.
+
+function Bards_Burst_Targets(agent ThisAgent, agent Target) is list
+declare
+    list Monsters, Heroes, Buildings, Targets, Enemies;
+    agent Victim;
+    coordinate Center;
+begin
+    Center = $LocationOf(Target);
+    $ListObjects(ThisAgent, "monster", 70, Monsters, Center, #NotMyPlayer);
+    $ListObjects(ThisAgent, "hero", 70, Heroes, Center, #NotMyTeam);
+    $ListObjects(ThisAgent, "building", 70, Buildings, Center, #NotMyTeam);
+    Targets = $AddLists(Monsters, Heroes);
+    Targets = $AddLists(Targets, Buildings);
+    // Stock NotMyPlayer includes other players' controlled monsters. The
+    // requested hostile-only burst must also exclude allied/neutral units.
+    foreach Victim in Targets do
+        if ($Bards_Hostile_Target(ThisAgent, Victim))
+            Enemies << Victim;
+    return Enemies;
+end
+
+function Bards_Reverberation_Ready(agent Caster) is boolean
+declare
+begin
+    if ($notvalid_attacker(Caster)) return FALSE;
+    if (Caster's "title" != "Spellsinger") return FALSE;
+    if ($GetAttribute(Caster, #ATTRIB_ExperienceLevel) < 3) return FALSE;
+    if ($HasAttribute("BardsReverberatedAt", Caster))
+        if ($MM_SimulationElapsed(Caster's "BardsReverberatedAt") < 6000) return FALSE;
+    return TRUE;
+end
+
+function Bards_Reverberation_Target(agent Caster, agent Primary, coordinate Center) is agent
+declare
+    list Monsters, Heroes, Buildings, Candidates, Enemies;
+    agent Enemy;
+begin
+    // A bounded stock radius query at the completed impact, never a scan timer.
+    // Provisional bounce radius: 80 world units, at most one second victim.
+    $ListObjects(Caster, "monster", 80, Monsters, Center, #NotMyPlayer);
+    $ListObjects(Caster, "hero", 80, Heroes, Center, #NotMyTeam);
+    $ListObjects(Caster, "building", 80, Buildings, Center, #NotMyTeam);
+    Candidates = $AddLists(Monsters, Heroes);
+    Candidates = $AddLists(Candidates, Buildings);
+    foreach Enemy in Candidates do
+        if (Enemy != Primary)
+            if ($notvalid(Enemy) == FALSE)
+                if ($Bards_Hostile_Target(Caster, Enemy)) Enemies << Enemy;
+    if ($ListSize(Enemies) == 0) return $NullAgent();
+    return $ListMember(Enemies, 1);
+end
+
+function Bards_Reverberate(agent Caster, agent Primary, coordinate Center)
+declare
+    agent Echo;
+begin
+    if ($Bards_Reverberation_Ready(Caster) == FALSE) return;
+    Echo = $Bards_Reverberation_Target(Caster, Primary, Center);
+    if (Echo == $NullAgent())
+        begin
+            if ($notvalid(Primary)) return;
+            if ($Bards_Hostile_Target(Caster, Primary) == FALSE) return;
+        end
+    if ($HasAttribute("BardsReverberatedAt", Caster) == FALSE)
+        $AddAttribute(Caster, "BardsReverberatedAt", "integer", $MM_SimulationTime());
+    else Caster's "BardsReverberatedAt" = $MM_SimulationTime();
+    // Commit the proc before the second hit can cause death/reentrant callbacks.
+    // A resisted/lost echo never falls through to the solo debuff.
+    if (Echo != $NullAgent())
+        begin
+            if ($notvalid(Echo)) return;
+            $CreateEffector(Echo, "Bards_Echo_Flash", 0);
+            $PlaySound(Echo, "Energy_Blast", "Attack");
+            $Bards_Echo_Attack(Caster, Echo, 10);
+        end
+
+end
+
+function Bards_Resonant_Burst_Check(agent ThisAgent) is integer
+declare
+    agent Target;
+    list Targets;
+begin
+    if ($CheckEffector(ThisAgent, "Bards_Countermelody_Icon")) return 0;
+    Target = ThisAgent's "Target";
+    if ($notvalid(Target))
+        return 0;
+    Targets = $Bards_Burst_Targets(ThisAgent, Target);
+    if ($ListSize(Targets) > 0)
+        return 1;
+    return 0;
+end
+
+function Bards_Resonant_Burst_Hit(agent ThisAgent, agent Target)
+declare
+    list Targets;
+    agent Victim;
+begin
+    if ($notvalid(Target))
+        return;
+    if ($notvalid_attacker(ThisAgent))
+        return;
+    $CreateEffector(Target, "Bards_Burst_Flash", 0);
+    Targets = $Bards_Burst_Targets(ThisAgent, Target);
+    foreach Victim in Targets do
+        begin
+            if ($notvalid(Victim) == FALSE)
+                begin
+                    $CreateEffector(Victim, "Bards_Echo_Flash", 0);
+                    $Bards_Burst_Attack(ThisAgent, Victim, 15 + $GetAttribute(ThisAgent, #ATTRIB_ExperienceLevel));
+                end
+        end
+end
+
+// Shared target-owned stacks. The native timed effector owns expiry/refresh.
+function Bards_Resonance_Count(agent Target) is integer
+declare
+begin
+    if ($notvalid(Target)) return 0;
+    if ($CheckEffector(Target, "Bards_Reverberation_Icon") == FALSE) return 0;
+    if ($HasAttribute("BardsResonance", Target) == FALSE) return 0;
+    return Target's "BardsResonance";
+end
+
+function Bards_Resonance_Add(agent Caster, agent Target)
+declare
+    integer Stacks;
+begin
+    if ($notvalid_attacker(Caster)) return;
+    if ($GetAttribute(Caster, #ATTRIB_ExperienceLevel) < 3) return;
+    if ($notvalid(Target)) return;
+    Stacks = $Bards_Resonance_Count(Target);
+    if (Stacks < 6) Stacks += 1;
+    if ($HasAttribute("BardsResonance", Target) == FALSE)
+        $AddAttribute(Target, "BardsResonance", "integer", Stacks);
+    else Target's "BardsResonance" = Stacks;
+    $CreateEffector(Target, "Bards_Reverberation_Icon", 10000);
+end
+
+function Bards_Crescendo(agent Target)
+declare
+    integer Stacks;
+begin
+    Stacks = $Bards_Resonance_Count(Target);
+    if (Stacks == 0) return;
+    // Consume before any freeze/reaction callback; the next hit can rebuild.
+    Target's "BardsResonance" = 0;
+    $DeleteEffector(Target, "Bards_Reverberation_Icon");
+    // Stock Paralytic Gaze lock and expiry; approved private overhead art.
+    // The timed visible overlay owns cleanup, as in the Alchemist restraint.
+    if (Target's "Type" != "Building" && Target's "Type" != "Lair")
+        begin
+            $CreateEffector(Target, "Bards_Crescendo_Icon", Stacks * 500);
+            $SetAttribute(Target, #ATTRIB_HasEffectParalyticGaze, 1);
+            $Freeze_Unit(Target);
+            $SpecifyIntent(Target, #intent_paralyized);
+        end
+end

@@ -1,0 +1,12 @@
+art/
+audio/
+assets/
+reference/
+checkpoints/
+workshop/
+docs/internal/
+private/
+dist/
+artifacts/
+__pycache__/
+*.pyc

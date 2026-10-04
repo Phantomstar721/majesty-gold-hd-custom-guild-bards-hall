@@ -1,0 +1,422 @@
+// Existing guild visitors and Wizard/Healer companion tasks own movement.
+// The Manager's shared stock activity service owns the saved contract duration.
+// Approved fee: 200 gold (100 guild / 100 bard), 50 left in reserve,
+// 120000 sampled game ms.
+
+function Bards_Is_Bard(agent Hero) is boolean
+declare
+begin
+    if ($IsValidGamePiece(Hero) == FALSE) return FALSE;
+    return ((Hero's "title" == "Troubadour") || (Hero's "title" == "Spellsinger") || (Hero's "title" == "Blade_Dancer"));
+end
+
+function Bards_Hire_Alive(agent Subject) is boolean
+declare
+begin
+    if ($IsValidGamePiece(Subject) == FALSE) return FALSE;
+    if ($IsDead(Subject)) return FALSE;
+    return ($GetAttribute(Subject, #ATTRIB_HP) > 0);
+end
+
+function Bards_Hire_Guild(agent Patron, agent Guild) is boolean
+declare
+begin
+    if ($Bards_Hire_Alive(Guild) == FALSE) return FALSE;
+    if (Guild's "title" != "Bards_Hall") return FALSE;
+    if ($GetAttribute(Guild, #ATTRIB_FirstStageBuilt) != 1) return FALSE;
+    if ($GetUnitPlayerNumber(Patron) != $GetUnitPlayerNumber(Guild)) return FALSE;
+    return TRUE;
+end
+
+function Bards_Hire_Patron_Free(agent Patron) is boolean
+declare
+begin
+    if ($Bards_Hire_Alive(Patron) == FALSE) return FALSE;
+    if (Patron's "subtype" != "Hero") return FALSE;
+    if ($Bards_Is_Bard(Patron)) return FALSE;
+    if ($HasAttribute("BardsHiredBard", Patron))
+        if (Patron's "BardsHiredBard" != $NullAgent()) return FALSE;
+    if ($hasLowHP(Patron)) return FALSE;
+    if ($Total_Gold(Patron) < 250) return FALSE;
+    return TRUE;
+end
+
+function Bards_Hire_Available(agent Bard, agent Patron, agent Guild) is boolean
+declare
+    agent Leader;
+begin
+    if ($Bards_Hire_Alive(Bard) == FALSE) return FALSE;
+    if ($Bards_Is_Bard(Bard) == FALSE) return FALSE;
+    if ($Bards_Hiring_Is_Open(Guild) == FALSE) return FALSE;
+    if (Bard's "home" != Guild) return FALSE;
+    if ($GetUnitPlayerNumber(Bard) != $GetUnitPlayerNumber(Patron)) return FALSE;
+    if (Bard's "title" == "Troubadour")
+        if ($Bards_Follow_Target_Eligible(Bard, Patron) == FALSE) return FALSE;
+    if ($HasAttribute("BardsHirePatron", Bard))
+        if (Bard's "BardsHirePatron" != $NullAgent()) return FALSE;
+    if ($HasAttribute("BardsHireCancelPending", Bard))
+        if (Bard's "BardsHireCancelPending") return FALSE;
+    if ($Bards_Contract_State(Bard, 1) != 0) return FALSE;
+    if ($HasAttribute("AGAcceptedQuest", Bard))
+        if (Bard's "AGAcceptedQuest" == Bard) return FALSE;
+    // A healthy member resting at its own guild can leave through the normal
+    // exit routine. Do not wake a recuperating hero before stock healing.
+    if ($InsideBuilding(Bard))
+        begin
+            if (Bard's "Target" != Guild) return FALSE;
+            if (Bard's "BasicScript" != Bard's "StartingScript") return FALSE;
+            if ((Bard's "ActiveScript" != $Rest_at_guild) && (Bard's "ActiveScript" != $Done_resting_guild)) return FALSE;
+            if ($GetAttribute(Bard, #ATTRIB_HP) < $GetAttribute(Bard, #ATTRIB_MaxHP)) return FALSE;
+            return TRUE;
+        end
+    if ($notvalid_attacker(Bard)) return FALSE;
+    if ($hasLowHP(Bard)) return FALSE;
+    if (Bard's "BasicScript" != Bard's "StartingScript")
+        begin
+            if (Bard's "BasicScript" != $Bards_Follow_Support) return FALSE;
+            Leader = Bard's "BackTarget";
+            if ($Bards_Hire_Alive(Leader))
+                if ($Bards_Hero_Engaged(Leader)) return FALSE;
+        end
+    if ($Bards_Hero_Engaged(Bard)) return FALSE;
+    // Only interrupt ordinary decisions, wandering, exploration or peaceful
+    // follow travel. Shopping, fleeing, performance and other jobs finish first.
+    if (Bard's "ActiveScript" == Bard's "BasicScript") return TRUE;
+    if ((Bard's "ActiveScript" == $hero_wander) ||
+        (Bard's "ActiveScript" == $Bards_Spellsinger_Wander) ||
+        (Bard's "ActiveScript" == $Bards_Dancer_Wander)) return TRUE;
+    if (Bard's "BackScript" == Bard's "BasicScript")
+        if ((Bard's "ActiveScript" == $travel_to_exp) ||
+            (Bard's "ActiveScript" == $travel_to) ||
+            (Bard's "ActiveScript" == $travel_to_safe) ||
+            (Bard's "ActiveScript" == $Bards_Travel_Support)) return TRUE;
+    return FALSE;
+end
+
+function Bards_Hire_Preference(agent Patron) is string
+declare
+begin
+    if ((Patron's "title" == "Wizard") || (Patron's "title" == "Priestess") || (Patron's "title" == "Healer"))
+        return "Blade_Dancer";
+    if ((Patron's "attacktype" == 2) || (Patron's "attacktype" == 5)) return "Spellsinger";
+    if ((Patron's "title" == "Ranger") || (Patron's "title" == "Elf") || (Patron's "title" == "Rogue"))
+        return "Spellsinger";
+    return "Troubadour";
+end
+
+function Bards_Hire_Choose(agent Patron, agent Guild) is agent
+declare
+    agent Bard, Best;
+    string Preferred;
+    integer Score, BestScore;
+begin
+    if ($Bards_Hire_Guild(Patron, Guild) == FALSE) return $NullAgent();
+    Preferred = $Bards_Hire_Preference(Patron);
+    Best = $NullAgent();
+    BestScore = -1;
+    foreach Bard in Guild's "Members" do
+        if ($Bards_Hire_Available(Bard, Patron, Guild))
+            begin
+                Score = 0;
+                // Local availability takes priority, then preferred class.
+                if ($InsideBuilding(Bard)) Score = 2;
+                else if ($DistanceBetweenAgents(Bard, Guild) <= 200) Score = 2;
+                if (Bard's "title" == Preferred) Score += 1;
+                if (Score > BestScore)
+                    begin
+                        Best = Bard;
+                        BestScore = Score;
+                    end
+            end
+    return Best;
+end
+
+function Bards_Hire_Check(agent Patron, list Buildings) is boolean
+declare
+    agent Guild, Bard, SelectedGuild;
+begin
+    // Reuse the stock equipment decision's completed-building snapshot, after
+    // every ordinary equipment/potion/training choice has declined.
+    if ($Bards_Hire_Patron_Free(Patron) == FALSE) return FALSE;
+    if (Patron's "ActiveScript" != Patron's "StartingScript") return FALSE;
+    if ($InsideBuilding(Patron)) return FALSE;
+    if ($IsMoving(Patron)) return FALSE;
+    if ($HasAttribute("BardsHireConsideredAt", Patron))
+        if ($MM_SimulationElapsed(Patron's "BardsHireConsideredAt") < 30000) return FALSE;
+    SelectedGuild = $NullAgent();
+    foreach Guild in Buildings do
+        if (SelectedGuild == $NullAgent())
+            begin
+                Bard = $Bards_Hire_Choose(Patron, Guild);
+                if (Bard != $NullAgent()) SelectedGuild = Guild;
+            end
+    if (SelectedGuild == $NullAgent()) return FALSE;
+    if ($HasAttribute("BardsHireConsideredAt", Patron) == FALSE)
+        $AddAttribute(Patron, "BardsHireConsideredAt", "integer", $MM_SimulationTime());
+    else Patron's "BardsHireConsideredAt" = $MM_SimulationTime();
+    if ($RandomNumber(100) >= 25) return FALSE;
+    Patron's "Target" = SelectedGuild;
+    Patron's "TaskName" = "Bards_Hiring";
+    Patron's "ActiveScript" = $Use_Building;
+    $SpecifyIntent(Patron, #Bards_Intent_Hiring);
+    return TRUE;
+end
+
+function Bards_Hire_Start(agent Patron, agent Bard, agent Guild) is boolean
+declare
+    integer Result;
+begin
+    if ($Bards_Hire_Patron_Free(Patron) == FALSE) return FALSE;
+    if ($Bards_Hire_Guild(Patron, Guild) == FALSE) return FALSE;
+    if ($Bards_Hire_Available(Bard, Patron, Guild) == FALSE) return FALSE;
+    Result = $Bards_Contract_Start(Bard, Patron, Guild, 1, 120000);
+    // No charge or companion assignment on capacity, busy or other failures.
+    if (Result != 1) return FALSE;
+    if ($HasAttribute("BardsHirePatron", Bard) == FALSE)
+        $AddAttribute(Bard, "BardsHirePatron", "agentref", Patron);
+    else Bard's "BardsHirePatron" = Patron;
+    if ($HasAttribute("BardsHireGuild", Bard) == FALSE)
+        $AddAttribute(Bard, "BardsHireGuild", "agentref", Guild);
+    else Bard's "BardsHireGuild" = Guild;
+    if ($HasAttribute("BardsHirePlayer", Bard) == FALSE)
+        $AddAttribute(Bard, "BardsHirePlayer", "integer", $GetUnitPlayerNumber(Bard));
+    else Bard's "BardsHirePlayer" = $GetUnitPlayerNumber(Bard);
+    if ($HasAttribute("BardsHiredBard", Patron) == FALSE)
+        $AddAttribute(Patron, "BardsHiredBard", "agentref", Bard);
+    else Patron's "BardsHiredBard" = Bard;
+    $Bards_Hire_Pay(Patron, Guild, 200, Bard);
+    if ($InsideBuilding(Bard)) $exit_building(Bard, Guild);
+    // Stock reset_tasks stops an abandoned travel order before replacing its
+    // target. Keep the same ordering while preserving the paid assignment.
+    $StopMoving(Bard);
+    if (Bard's "title" == "Troubadour") Bard's "BasicScript" = $Bards_Follow_Support;
+    else Bard's "BasicScript" = $Bards_Hired_Follow;
+    Bard's "ActiveScript" = Bard's "BasicScript";
+    Bard's "BackScript" = Bard's "BasicScript";
+    Bard's "BackTarget" = Patron;
+    Bard's "Target" = Patron;
+    Bard's "counter" = 0;
+    $Bards_Follow_Intent(Bard);
+    return TRUE;
+end
+
+function Bards_Hall_Visited(agent Patron)
+declare
+    agent Guild, Bard;
+begin
+    Guild = Patron's "Target";
+    if ($Bards_Hire_Alive(Guild) == FALSE)
+        begin
+            $reset_tasks(Patron);
+            return;
+        end
+    $enter_building(Patron, Guild);
+    if (Patron's "TaskName" == "Bards_Hiring")
+        begin
+            Bard = $Bards_Hire_Choose(Patron, Guild);
+            if (Bard != $NullAgent()) $Bards_Hire_Start(Patron, Bard, Guild);
+        end
+    Patron's "TaskName" = "";
+    // Exit/reset/unhide and normal task interval remain stock owned.
+    $exit_building(Patron, Guild);
+end
+
+function Bards_Hire_Condition(agent Bard, agent Patron, agent Guild, integer Key) is boolean
+declare
+begin
+    // Paid elapsed time, including combat/travel. No scans or ledger mutations.
+    // The shared service separately owns death/deletion cancellation.
+    return TRUE;
+end
+
+function Bards_Hire_Assigned(agent Bard) is boolean
+declare
+begin
+    if ($HasAttribute("BardsHirePatron", Bard) == FALSE) return FALSE;
+    return (Bard's "BardsHirePatron" != $NullAgent());
+end
+
+function Bards_Hire_Wait(agent Bard) is boolean
+declare
+    agent Patron, Building;
+begin
+    if ($Bards_Hire_Assigned(Bard) == FALSE) return FALSE;
+    Patron = Bard's "BardsHirePatron";
+    if ($Bards_Hire_Alive(Patron) == FALSE) return FALSE;
+    if ($InsideBuilding(Patron) == FALSE)
+        begin
+            // The employer left while we approached: discard the building
+            // order before the normal follow branch chooses its next move.
+            if (Bard's "Target" != Patron)
+                begin
+                    $StopMoving(Bard);
+                    Bard's "Target" = Patron;
+                end
+            return FALSE;
+        end
+    Building = Patron's "Target";
+    if ($Bards_Hire_Alive(Building) == FALSE)
+        begin
+            $StopMoving(Bard);
+            return TRUE;
+        end
+    if (Building's "type" != "Building")
+        begin
+            $StopMoving(Bard);
+            return TRUE;
+        end
+    // Retain the existing follow decision and native movement lifecycle.
+    // BackTarget remains the employer; no use_building/Enter_Building task.
+    if ((Bard's "evaluationscript")(Bard)) return TRUE;
+    if ($DistanceBetweenAgents(Bard, Building) > 180)
+        begin
+            if ((Bard's "Target" != Building) || ($IsMoving(Bard) == FALSE))
+                begin
+                    Bard's "Target" = Building;
+                    Bard's "Destination" = $LocationOf(Building);
+                    $Move(Bard, Building, "avoid_vehicles");
+                end
+            return TRUE;
+        end
+    $StopMoving(Bard);
+    Bard's "Target" = Patron;
+    if ($RandomNumber(100) > 85) $PerformAction(Bard, Bard's "Idle_action", Bard);
+    return TRUE;
+end
+
+function Bards_Hire_Release(agent Bard, agent Patron)
+declare
+    boolean Following;
+begin
+    if ($IsValidGamePiece(Patron))
+        if ($HasAttribute("BardsHiredBard", Patron))
+            if (Patron's "BardsHiredBard" == Bard) Patron's "BardsHiredBard" = $NullAgent();
+    if ($IsValidGamePiece(Bard) == FALSE) return;
+    if ($HasAttribute("BardsHirePatron", Bard) == FALSE) return;
+    if (Bard's "BardsHirePatron" != Patron) return;
+    // Clear identity first; duplicate/stale terminal callbacks cannot affect a
+    // later patron, pay twice or redirect a dismissed/charmed/dead hero.
+    Bard's "BardsHirePatron" = $NullAgent();
+    Bard's "BardsHireGuild" = $NullAgent();
+    Following = ((Bard's "BasicScript" == $Bards_Follow_Support) || (Bard's "BasicScript" == $Bards_Hired_Follow));
+    if (Following == FALSE) return;
+    // Stock Shared_Begin_Resurrect resumes BasicScript, not StartingScript.
+    // Restore only this saved assignment even on a dead hero; do not touch its
+    // active death/gravestone thread or invoke movement/task reset while dead.
+    Bard's "BasicScript" = Bard's "StartingScript";
+    Bard's "BackTarget" = $NullAgent();
+    if ($Bards_Hire_Alive(Bard) == FALSE) return;
+    if ((Bard's "ActiveScript" == $Bards_Follow_Support) || (Bard's "ActiveScript" == $Bards_Hired_Follow) ||
+        (Bard's "ActiveScript" == $attack_object) || (Bard's "ActiveScript" == $travel_to) || (Bard's "ActiveScript" == $travel_to_safe) ||
+        (Bard's "ActiveScript" == $Bards_Travel_Support))
+        $reset_tasks(Bard);
+    // Healing/fleeing/building routines retain their current stock task.
+end
+
+function Bards_Hire_Completed(agent Bard, agent Patron, agent Guild, integer Key)
+declare
+begin
+    $Bards_Hire_Release(Bard, Patron);
+end
+
+function Bards_Hire_Cancelled(agent Bard, agent Patron, agent Guild, integer Key, integer Reason)
+declare
+begin
+    $Bards_Hire_Release(Bard, Patron);
+end
+
+function Bards_Hire_Valid(agent Bard, agent Patron) is boolean
+declare
+    agent Guild;
+begin
+    if ($Bards_Hire_Alive(Bard) == FALSE) return FALSE;
+    if ($Bards_Hire_Alive(Patron) == FALSE) return FALSE;
+    Guild = Bard's "BardsHireGuild";
+    if ($Bards_Hire_Guild(Patron, Guild) == FALSE) return FALSE;
+    if ($GetUnitPlayerNumber(Bard) != Bard's "BardsHirePlayer") return FALSE;
+    if ($GetUnitPlayerNumber(Patron) != Bard's "BardsHirePlayer") return FALSE;
+    if (Bard's "home" != Guild) return FALSE;
+    if ($HasAttribute("BardsHiredBard", Patron) == FALSE) return FALSE;
+    if (Patron's "BardsHiredBard" != Bard) return FALSE;
+    if ($Bards_Contract_State(Bard, 1) <= 0) return FALSE;
+    if ($hasLowHP(Bard)) return FALSE;
+    if ((Bard's "BasicScript" != $Bards_Follow_Support) && (Bard's "BasicScript" != $Bards_Hired_Follow)) return FALSE;
+    return TRUE;
+end
+
+function Bards_Hire_Guard(agent Bard) is boolean
+declare
+    agent Patron;
+    integer Result;
+begin
+    if ($Bards_Try_Finale(Bard)) return TRUE;
+    if ($HasAttribute("BardsHireCancelPending", Bard))
+        if (Bard's "BardsHireCancelPending")
+            begin
+                Result = $Bards_Contract_Cancel(Bard, 1);
+                if (Result != -3) Bard's "BardsHireCancelPending" = FALSE;
+            end
+    if ($HasAttribute("BardsHirePatron", Bard) == FALSE) return FALSE;
+    Patron = Bard's "BardsHirePatron";
+    if (Patron == $NullAgent()) return FALSE;
+    if ($Bards_Hire_Valid(Bard, Patron)) return FALSE;
+    $Bards_Hire_Cancel_Now(Bard, Patron);
+    return TRUE;
+end
+
+function Bards_Hire_Cancel_Now(agent Bard, agent Patron)
+declare
+    integer Result;
+begin
+    Result = $Bards_Contract_Cancel(Bard, 1);
+    if (Result == -3)
+        begin
+            if ($HasAttribute("BardsHireCancelPending", Bard) == FALSE)
+                $AddAttribute(Bard, "BardsHireCancelPending", "boolean", TRUE);
+            else Bard's "BardsHireCancelPending" = TRUE;
+        end
+    // Release claims immediately even if the shared sampler is busy. Its saved
+    // registration remains unavailable for reuse until the next normal AI call
+    // retries cancellation. A terminal callback remains identity guarded.
+    if (Result != 1) $Bards_Hire_Release(Bard, Patron);
+end
+
+function Bards_Hire_Abort(agent Hero)
+declare
+    agent Bard, Patron;
+begin
+    if ($HasAttribute("BardsHiredBard", Hero))
+        begin
+            Bard = Hero's "BardsHiredBard";
+            if ($IsValidGamePiece(Bard))
+                begin
+                    $Bards_Hire_Cancel_Now(Bard, Hero);
+                end
+        end
+    if ($HasAttribute("BardsHirePatron", Hero))
+        begin
+            Patron = Hero's "BardsHirePatron";
+            if (Patron != $NullAgent())
+                begin
+                    $Bards_Hire_Cancel_Now(Hero, Patron);
+                end
+        end
+end
+
+// Private saved state is written by the Manager's stock paired-toggle adapter.
+// Missing state is open; gate new recruitment only, never existing contracts.
+function Bards_Hiring_Is_Open(agent Guild) is boolean
+declare
+begin
+    if ($HasAttribute("BardsHiringClosed", Guild) == FALSE) return TRUE;
+    return (Guild's "BardsHiringClosed" == FALSE);
+end
+
+function Bards_Follow_Intent(agent Bard)
+declare
+begin
+    if ($Bards_Hire_Assigned(Bard))
+        $SpecifyIntent(Bard, #Bards_Intent_Hired_Support);
+    else
+        $SpecifyIntent(Bard, #intent_following_and_supporting);
+end
