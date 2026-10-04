@@ -4,8 +4,7 @@ Every kingdom needs a story worth telling. Give yours a chorus.
 
 Raise a Bards Hall and welcome three very different performers to Ardania:
 the travelling Troubadour, the magical Spellsinger, and the daring Blade Dancer.
-Each brings original artwork, animations, portraits, names, spell effects and
-voiced reactions, along with a private set of habits and ambitions.
+Welcome their music, magic and swordplay with custom artwork and voiced reactions.
 
 ## A tale, a song, a duel
 
@@ -53,5 +52,4 @@ alongside it to prepare one combined profile. The guild's recruitment panel,
 equipment and shared systems require the Manager's runtime; enabling the raw
 package in Majesty's ordinary mod selector does not provide those features.
 
-Designed for Original Majesty and Northern Expansion content. This release
-candidate is undergoing final testing before publication.
+Supports Original Majesty and Northern Expansion content.
