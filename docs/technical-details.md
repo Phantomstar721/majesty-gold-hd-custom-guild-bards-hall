@@ -1,5 +1,10 @@
 # Bards Hall technical details
 
+For complete hero stats, growth, spells, skills, effects, damage formulas,
+equipment progression and economy rules, see the
+**[gameplay reference](gameplay-reference.md)**. This page covers resource
+identities and implementation integration.
+
 Bards Hall is a Manager-dependent Majesty Gold HD mod. It contains private
 building and hero descriptions, GPL behavior, CAM resources and typed Manager
 feature declarations. The Manager supplies native integration that ordinary

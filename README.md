@@ -14,6 +14,35 @@ three-level Bards Hall and three distinct heroes.
 Each hero learns new abilities as they level up. The mod includes custom
 building and hero artwork, portraits, spell effects and voiced reactions.
 
+### Abilities
+
+| Hero | Level | Spells and skills |
+| --- | ---: | --- |
+| Troubadour | 1 | **Ballad of Valor:** improves allied accuracy, Parry, Dodge and Magic Resistance. |
+| Troubadour | 3 | **Marching Song:** increases movement speed and quickens actions. |
+| Troubadour | 5 | **Cutting Satire:** weakens and slows an enemy. |
+| Troubadour | 8 | **Heroic Refrain:** adds 3 outgoing damage and reduces incoming combat-hit damage by 3. |
+| Spellsinger | 1 | **Arcane Note:** an Intelligence-based magical projectile, improved by instrument upgrades. |
+| Spellsinger | 3 | **Reverberation / Resonance:** notes echo to a second enemy and build shared stacks that increase subsequent Note damage. |
+| Spellsinger | 5 | **Countermelody:** reduces enemy accuracy and suppresses special casting. |
+| Spellsinger | 8 | **Resonant Burst / Crescendo:** area damage consumes Resonance to stun enemies. |
+| Blade Dancer | 1 | **Duelist Training:** high starting Parry and Dodge. |
+| Blade Dancer | 3 | **Riposte:** counterattacks after a successful melee parry. |
+| Blade Dancer | 5 | **Deflect:** blocks an eligible missile or direct spell attack. |
+| Blade Dancer | 8 | **Dueling Flourish:** every third successful same-enemy hit deals extra damage through reduced armor. **Rousing Finale** inspires allies after a prepared kill; **Encore** prepares the next opponent, and **Roused** improves allied offense, defense and bravery. |
+
+### Starting stats
+
+| Hero | HP | STR | VIT | INT | WILL | Artifice | Attack | Parry | Dodge | Magic Resistance |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Troubadour | 14 | 1 | 12 | 22 | 20 | 3 | 15 | 25 | 40 | 15 |
+| Spellsinger | 11 | 3 | 8 | 21 | 10 | 15 | 35 | 20 | 30 | 20 |
+| Blade Dancer | 16 | 9 | 16 | 15 | 14 | 25 | 55 | 65 | 55 | 0 |
+
+See the **[complete gameplay reference](docs/gameplay-reference.md)** for every
+spell and effect, durations and cooldowns, Intelligence scaling, damage formulas,
+level growth, equipment tiers and prices, income rewards, and hiring requirements.
+
 ## Hall progression
 
 All three bard types cost **500 gold** and are available from level 1.
